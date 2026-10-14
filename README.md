@@ -16,10 +16,11 @@ npm run dev
 ## Features
 
 - 三章：AWS WAF とは？ / WAF ルールの仕組み / ルールを変えて試してみよう！
-- 第二章为只读固定例讲解（Match / 终止、Count 继续、Default Action），仅保留功能讲解、流程与逐步操作，不显示 Web ACL 设置区或请求选择；第三章开放规则实验，教学例不受实验配置影响。
+- 第二章为只读固定例讲解（Match / 终止、Count 继续、Default Action），仅保留功能讲解、流程与逐步操作，不显示 Web ACL 设置区或请求选择；第三章按顺序、Count、默认动作三个任务逐步引导；完整编辑在「詳しい設定を開く」中，教学例不受实验配置影响。
 - 正常与攻击样本、Enabled、Allow / Block / Count、Priority、Default Action。
 - 按优先级执行，Allow / Block 终止，Count 继续；重叠规则展示顺序影响。
 - 执行快照驱动动画、Match / No Match、禁用与未评估状态。
+- 默认突出一个学习点及当前步骤，术语、历史轨迹、上次详细设置按需展开。
 - 自动播放、逐步执行、暂停、重新播放、重置、前次结果比较。
 - Presenter Mode、Alt+Left/Right 章节切换、Esc 退出演讲布局。
 - 桌面与手机浏览、减少动画偏好支持。
@@ -61,7 +62,7 @@ Vite base 为 `./`。部署整个 `dist/`，保留 App 根入口与独立的 `de
 
 1. Chapter 01：发送正常和攻击样本，再关闭检测规则。
 2. Chapter 02：介绍 Web ACL、Condition、Match 与 Action，说明 Priority 数字越小越先执行。
-3. Chapter 03：攻击样本先 Block；交换顺序得到 Allow；恢复顺序并将检测改为 Count，观察继续评估；两条规则都设为 Count，切换 Default Action。
+3. Chapter 03：先点击「この練習を準備」，发送样本，再交换顺序并重发；进入下一任务，只修改 Count；最后一个任务只修改 Default Action。完整设置按需展开。
 
 ## Next version
 

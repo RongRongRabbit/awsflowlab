@@ -62,7 +62,7 @@ app.css：方向粒子、动作颜色、演讲与响应式布局
 
 <!-- code-ref:src/App.tsx#chapters -->
 
-Chapter 01 使用原有 User → WAF → Website 关系，固定 Block 检测和 Default Allow，保留请求选择与规则开关。Chapter 02 是只读规则讲解，提供 Match / 终止、Count 继续、Default Action 三个固定例，用逐步按钮展示事件，不显示独立的 Web ACL 设置区、只读设置卡或请求选择控件；仅保留固定示例、规则流程与执行解释。createLessonAcl 为每个例子创建独立配置，实验修改不会改变教学例。Chapter 03 才开放 Enabled、Action、Priority、Default Action 编辑和上次执行比较，使用个人实验配置进行顺序、Count 和默认动作实验。原第四章总结已合并到第三章末尾。总讲解时间约 4.5～5 分钟，这是内容预算，不是实际计时器。
+Chapter 01 使用原有 User → WAF → Website 关系，固定 Block 检测和 Default Allow，保留请求选择与规则开关。Chapter 02 是只读规则讲解，提供 Match / 终止、Count 继续、Default Action 三个固定例，用逐步按钮展示事件，不显示独立的 Web ACL 设置区、只读设置卡或请求选择控件；仅保留固定示例、规则流程与执行解释。createLessonAcl 为每个例子创建独立配置，实验修改不会改变教学例。第二章默认仅突出当前例子的一个学习点，术语表及历史步骤按需展开。Chapter 03 默认通过三个任务依次练习顺序、Count、默认动作；先发送基线，再修改一个设置，重新执行后才解锁下一任务。任务之间重建独立示例并清空比较记录。「この練習を準備（設定を初期化）」明确恢复当前任务基线。「詳しい設定を開く」才开放完整 Enabled、Action、Priority、Default Action 编辑和请求选择；收起设置时仍保留配置。原第四章总结已合并到第三章末尾。总讲解时间约 4.5～5 分钟，这是内容预算，不是实际计时器。
 
 ```flow
 用户选择请求 / 修改 Enabled、Action、Priority、Default Action
@@ -74,11 +74,12 @@ createExecution → evaluateWaf → 保存事件，step = 0
 ```
 
 <!-- code-ref:src/App.tsx#createLessonAcl -->
+<!-- code-ref:src/App.tsx#prepareTask -->
 <!-- code-ref:src/App.tsx#send -->
 <!-- code-ref:src/App.tsx#changePriority -->
 <!-- code-ref:src/App.tsx#goChapter -->
 
-`send` 在第三章上次执行已结束时保存其请求、规则动作、优先级和默认动作，用于与新结果比较。`changePriority` 保证输入非负整数；若与另一条规则相同则交换两者数值。`goChapter` 重置播放，但保留请求和实验规则配置。第二章固定使用攻击样本，切换示例时重置播放，不改变第一、三章的请求选择。第二章从「例を確認」开始，仅手动逐步，最初から回到第一事件；第一、三章保留自动播放。Alt + 左右切换章节，Esc 退出 Presenter Mode。Presenter Mode 是布局切换，并非浏览器全屏。
+`send` 在第三章上次执行已结束时保存其请求、规则动作、优先级和默认动作，用于与新结果比较。默认只显示前次请求及结果，完整配置按需展开。第三章引导模式固定发送攻击样本；高级模式使用所选请求。`changePriority` 保证输入非负整数；若与另一条规则相同则交换两者数值。`goChapter` 重置播放，但保留请求和实验规则配置。第二章固定使用攻击样本，切换示例时重置播放，不改变第一、三章的请求选择。第二章从「例を確認」开始，仅手动逐步，最初から回到第一事件；第一、三章保留自动播放。Alt + 左右切换章节，Esc 退出 Presenter Mode。Presenter Mode 是布局切换，并非浏览器全屏。
 
 ## 规则模型与执行语义
 
@@ -128,11 +129,11 @@ break;
 <!-- code-ref:src/components/RequestFlow.tsx#RequestFlow -->
 <!-- code-ref:src/components/RequestFlow.tsx#ExecutionTrace -->
 
-`RequestFlow` 第一章直接渲染三个同级节点（User / WAF / Website），只显示一个 WAF 标题，避免嵌套 flex 卡片撑出容器或连线穿过节点。第二、三章使用 Web ACL 容器，规则卡和容器禁止收缩，详细流程按内容宽度布局；窄屏在流程区域内横向滚动。它按本次执行的顺序排列卡片，仅显示已执行事件的状态。当前 ruleId 高亮对应卡片；终止后剩余卡片显示未评估。`ExecutionTrace` 只显示 `events.slice(0, step + 1)`，不会提前泄露最终答案。移动粒子由当前事件激活，单次播放，不持续循环；发送和重播通过新的组件 key 重启动画；最终 Allow 只播放一次通往网站的动画。
+`RequestFlow` 第一章直接渲染三个同级节点（User / WAF / Website），只显示一个 WAF 标题，避免嵌套 flex 卡片撑出容器或连线穿过节点。第二、三章使用 Web ACL 容器，规则卡和容器禁止收缩，详细流程按内容宽度布局；窄屏在流程区域内横向滚动。它按本次执行的顺序排列卡片，仅显示已执行事件的状态。当前 ruleId 高亮对应卡片；终止后剩余卡片显示未评估。界面默认只突出当前事件的一句说明；历史轨迹在折叠区域中。`ExecutionTrace` 只显示 `events.slice(0, step + 1)`，不会提前泄露最终答案。移动粒子由当前事件激活，单次播放，不持续循环；发送和重播通过新的组件 key 重启动画；最终 Allow 只播放一次通往网站的动画。
 
 ## 测试与质量检查
 
-[引擎测试](../src/services/waf/wafEngine.test.ts) 覆盖 v0.1 四组合、终止、Count 后继续、Priority 重叠、Default Allow / Block、禁用、No Match、空规则、配置校验、输入不变性和执行快照。[组件测试](../src/App.test.tsx) 覆盖三个章节、第二章无设置区和请求编辑入口、固定例与第三章配置隔离、快捷键、Presenter、规则开关、顺序反转、Count、默认动作、自动推进、重播与重置。
+[引擎测试](../src/services/waf/wafEngine.test.ts) 覆盖 v0.1 四组合、终止、Count 后继续、Priority 重叠、Default Allow / Block、禁用、No Match、空规则、配置校验、输入不变性和执行快照。[组件测试](../src/App.test.tsx) 覆盖三个章节、第二章无设置区和请求编辑入口、固定例与第三章配置隔离、任务逐步解锁、Count 与默认动作任务、按需术语/轨迹、高级编辑保留、快捷键、Presenter、规则开关、顺序反转、Count、默认动作、自动推进、重播与重置。
 
 [文档生成器测试](../scripts/docs.test.mjs) 验证重复构建字节一致，以及缺失本地链接、章节锚点、代码标识和过期文件树会失败。GitHub CI 执行相同检查，不部署站点。
 
