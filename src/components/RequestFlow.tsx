@@ -13,12 +13,13 @@ export function RequestFlow({ execution, step, rules, detailed }: { execution: E
   return <div className="flow-scroll"><div className={`diagram ${detailed ? 'detailed' : ''}`} aria-label="リクエストの流れ">
     <div className={`node ${current?.phase === 'request' ? 'activated' : ''}`}>👤<strong>利用者</strong><small>HTTP Request</small></div>
     <div className={`link ${current?.phase === 'request' ? 'flowing' : ''}`}><span className="particle"/><span className="link-label">→</span></div>
-    <div className="acl"><span className="eyebrow">{detailed ? 'WEB ACL · ルールの集合' : 'AWS WAF'}</span><div className="rule-flow">{detailed ? ordered.map((rule, index) => {
+    {detailed ? <div className="acl"><span className="eyebrow">WEB ACL · ルールの集合</span><div className="rule-flow">{ordered.map((rule, index) => {
       const event = status(rule.id);
       const active = current?.ruleId === rule.id;
       const skipped = done && !event;
       return <div className="rule-flow-item" key={rule.id}>{index > 0 && <div className={`link ${active ? 'flowing' : ''}`}><span className="particle"/>→</div>}<div className={`node rule-node ${active ? 'activated' : ''} ${event?.action?.toLowerCase() ?? ''}`}><small>Priority {rule.priority}</small><strong>{rule.name}</strong><small>{event ? event.status : skipped ? '未評価（前のルールで終了）' : '待機中'}</small>{event?.action && <b>{event.action}</b>}</div></div>;
-    }) : <div className={`node waf ${current?.phase === 'rule' ? 'activated' : ''}`}><strong>🛡 AWS WAF</strong><small>{basicRule?.status ?? 'ルールを確認'}</small></div>}</div>{current?.phase === 'default' && <div className={`default-pill ${current.action?.toLowerCase()}`}>{current.title}</div>}</div>
+    })}</div>{current?.phase === 'default' && <div className={`default-pill ${current.action?.toLowerCase()}`}>{current.title}</div>}</div>
+      : <div className={`node waf ${current?.phase === 'rule' ? 'activated' : ''}`}><strong>🛡 AWS WAF</strong><small>{basicRule?.status ?? 'ルールを確認'}</small></div>}
     <div className={`link ${done && result?.action === 'ALLOW' ? 'flowing' : ''} ${done && result?.action === 'BLOCK' ? 'blocked' : ''}`}><span className="particle"/><span className="link-label">{done ? result?.action : '→'}</span></div>
     <div className={`node ${done && result?.action === 'ALLOW' ? 'activated' : ''} ${done && result?.action === 'BLOCK' ? 'disabled' : ''}`}>🌐<strong>Web サイト</strong><small>{done ? result?.action === 'BLOCK' ? '到達しない' : 'アクセス到達' : '保護対象'}</small></div>
   </div></div>;

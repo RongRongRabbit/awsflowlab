@@ -127,7 +127,7 @@ break;
 <!-- code-ref:src/components/RequestFlow.tsx#RequestFlow -->
 <!-- code-ref:src/components/RequestFlow.tsx#ExecutionTrace -->
 
-`RequestFlow` 按本次执行的顺序排列卡片，仅显示已执行事件的状态。当前 ruleId 高亮对应卡片；终止后剩余卡片显示未评估。`ExecutionTrace` 只显示 `events.slice(0, step + 1)`，不会提前泄露最终答案。移动粒子由当前事件激活，单次播放，不持续循环；发送和重播通过新的组件 key 重启动画；最终 Allow 只播放一次通往网站的动画。
+`RequestFlow` 第一章直接渲染三个同级节点（User / WAF / Website），只显示一个 WAF 标题，避免嵌套 flex 卡片撑出容器或连线穿过节点。第二、三章使用 Web ACL 容器，规则卡和容器禁止收缩，详细流程按内容宽度布局；窄屏在流程区域内横向滚动。它按本次执行的顺序排列卡片，仅显示已执行事件的状态。当前 ruleId 高亮对应卡片；终止后剩余卡片显示未评估。`ExecutionTrace` 只显示 `events.slice(0, step + 1)`，不会提前泄露最终答案。移动粒子由当前事件激活，单次播放，不持续循环；发送和重播通过新的组件 key 重启动画；最终 Allow 只播放一次通往网站的动画。
 
 ## 测试与质量检查
 

@@ -11,7 +11,7 @@ describe('beginner lessons', () => {
     fireEvent.click(screen.getByRole('button', { name: '発表モード' })); expect(document.querySelector('.presenter')).not.toBeNull(); fireEvent.keyDown(window, { key: 'Escape' }); expect(document.querySelector('.presenter')).toBeNull();
   });
   it('keeps initial result hidden and preserves v0.1 toggle behavior', () => {
-    render(<App/>); expect(screen.queryByRole('status')).toBeNull(); fireEvent.click(screen.getByRole('button', { name: /攻撃サンプル/ }));
+    render(<App/>); expect(document.querySelectorAll('.diagram > .node')).toHaveLength(3); expect(document.querySelector('.diagram .acl')).toBeNull(); expect(screen.queryByRole('status')).toBeNull(); fireEvent.click(screen.getByRole('button', { name: /攻撃サンプル/ }));
     fireEvent.click(screen.getByRole('button', { name: '次のステップ →' })); for (let i = 0; i < 2; i++) fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));
     expect(screen.getByRole('status').textContent).toContain('BLOCK'); fireEvent.click(screen.getByRole('checkbox', { name: '攻撃検知ルール' }));
     fireEvent.click(screen.getByRole('button', { name: '次のステップ →' })); for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole('button', { name: '次のステップ →' })); expect(screen.getByRole('status').textContent).toContain('ALLOW'); expect(document.querySelector('.waf small')?.textContent).toBe('DISABLED');
@@ -32,7 +32,7 @@ describe('beginner lessons', () => {
   });
   it('automatic playback stops at result and configuration cannot alter its snapshot', () => {
     vi.useFakeTimers(); render(<App/>); fireEvent.click(screen.getByRole('button', { name: /攻撃サンプル/ })); fireEvent.click(screen.getByRole('button', { name: '▶ リクエストを送信' }));
-    act(() => { vi.advanceTimersByTime(950); }); expect(document.querySelector('.rule-flow .activated')).not.toBeNull();
+    act(() => { vi.advanceTimersByTime(950); }); expect(document.querySelector('.diagram > .waf.activated')).not.toBeNull();
     fireEvent.click(screen.getByRole('checkbox', { name: '攻撃検知ルール' })); expect(screen.getByText(/設定が変わりました/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '再生' })); for (let i = 0; i < 3; i++) act(() => { vi.advanceTimersByTime(950); }); expect(screen.getByRole('status').textContent).toContain('BLOCK'); expect(vi.getTimerCount()).toBe(0);
     fireEvent.click(screen.getByRole('button', { name: 'リセット' })); expect(screen.queryByRole('status')).toBeNull(); expect(document.querySelector('.flowing')).toBeNull();
