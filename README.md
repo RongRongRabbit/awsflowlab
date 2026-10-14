@@ -16,7 +16,7 @@ npm run dev
 ## Features
 
 - 三章：AWS WAF とは？ / WAF ルールの仕組み / ルールを変えて試してみよう！
-- 第二章为只读固定例讲解（Match / 终止、Count 继续、Default Action），第三章开放规则实验；教学例不受实验配置影响。
+- 第二章为只读固定例讲解（Match / 终止、Count 继续、Default Action），仅保留功能讲解、流程与逐步操作，不显示 Web ACL 设置区或请求选择；第三章开放规则实验，教学例不受实验配置影响。
 - 正常与攻击样本、Enabled、Allow / Block / Count、Priority、Default Action。
 - 按优先级执行，Allow / Block 终止，Count 继续；重叠规则展示顺序影响。
 - 执行快照驱动动画、Match / No Match、禁用与未评估状态。

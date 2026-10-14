@@ -21,7 +21,11 @@ describe('beginner lessons', () => {
     expect(screen.queryAllByRole('combobox')).toHaveLength(0);
     expect(screen.queryAllByRole('spinbutton')).toHaveLength(0);
     expect(screen.queryByRole('button', { name: 'ルールの順番を入れ替え' })).toBeNull();
-    expect(screen.getByRole('region', { name: '固定ルールの設定' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: '固定ルールの設定' })).toBeNull();
+    expect(screen.queryByText('Web ACL の設定')).toBeNull();
+    expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: /通常アクセス/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /攻撃サンプル/ })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: '② Count は次へ' }));
     fireEvent.click(screen.getByRole('button', { name: '例を確認' }));
     expect(screen.queryByRole('status')).toBeNull();
@@ -54,6 +58,7 @@ describe('beginner lessons', () => {
     expect((screen.getByLabelText('Default Action') as HTMLSelectElement).value).toBe('BLOCK');
     expect((screen.getByLabelText('攻撃の特徴を確認 Enabled') as HTMLInputElement).checked).toBe(false);
     expect(screen.getByRole('button', { name: 'ルールの順番を入れ替え' })).toBeTruthy();
+    expect(screen.getByText('Web ACL の設定')).toBeTruthy();
   });
   it('renders only evaluated rules and priority swap changes outcome', () => {
     render(<App/>); next(); next(); fireEvent.click(screen.getByRole('button', { name: /攻撃サンプル/ })); fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));

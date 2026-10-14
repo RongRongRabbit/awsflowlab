@@ -8,10 +8,7 @@
 .rule-flow,.rule-flow-item{flex:0 0 auto}
 .rule-flow-item>.rule-node{flex:0 0 150px;width:150px}
 
-.lesson-examples,.rule-reference{padding:20px 25px;border-bottom:1px solid #2a3d59}
+.lesson-examples{padding:20px 25px;border-bottom:1px solid #2a3d59}
 .lesson-examples>.segmented{margin-top:12px;flex-wrap:wrap}
-.lesson-examples p,.rule-reference p{font-size:12px;line-height:1.7;color:#bacbe2;margin-bottom:0}
-.reference-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.reference-cards article{border:1px solid #3a5477;border-radius:10px;padding:16px;background:#15243a;font-size:13px}
-.reference-cards strong{display:block;margin-top:8px}.reference-cards small{color:#9bb9e0}.reference-cards span{display:block;margin-top:10px}
-@media(max-width:600px){.reference-cards{grid-template-columns:1fr}.lesson-examples,.rule-reference{padding:16px}}
+.lesson-examples p{font-size:12px;line-height:1.7;color:#bacbe2;margin-bottom:0}
+@media(max-width:600px){.lesson-examples{padding:16px}}
