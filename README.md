@@ -1,45 +1,67 @@
-# AWS FlowLab v0.1 — AWS WAF Basics
+# AWS FlowLab v0.2 — AWS WAF Basics
 
-Interactive Japanese-language AWS WAF beginner lesson for a 3–5 minute presentation.
+日语 AWS WAF 初学者交互课程，适合约 5 分钟 LT 和自主学习。基于 React、TypeScript、Vite，无后端、AWS 账号或付费 API。
 
 ## Run locally
 
-Requires Node.js 20+.
+Requires Node.js 22.12+, 24.x, or 26+ (development verified with Node.js 24).
+
+Vite 8 / React plugin 6 and Vitest 5 retain the existing framework; tool versions were updated to resolve audit findings.
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite.
+## Features
 
-## Build
+- 三章：AWS WAF とは？ / WAF ルールの仕組み / ルールを変えて試してみよう！
+- 正常与攻击样本、Enabled、Allow / Block / Count、Priority、Default Action。
+- 按优先级执行，Allow / Block 终止，Count 继续；重叠规则展示顺序影响。
+- 执行快照驱动动画、Match / No Match、禁用与未评估状态。
+- 自动播放、逐步执行、暂停、重新播放、重置、前次结果比较。
+- Presenter Mode、Alt+Left/Right 章节切换、Esc 退出演讲布局。
+- 桌面与手机浏览、减少动画偏好支持。
+
+## Checks and build
 
 ```bash
+npm test
+npm run typecheck
+npm run docs:check
 npm run build
 npm run preview
 ```
 
-## GitHub Pages
+`build` 包含类型检查、App 打包及 Developer Guide 构建。`test:watch` 用于开发测试。
 
-The Vite base is `./`, which supports static deployment to a repository subpath. Upload the generated `dist/` directory using GitHub Actions or your preferred static hosting workflow.
+## Developer Guide
 
-## Features
+中文源文件：[docs/developer-guide.md](docs/developer-guide.md)。长期维护规范：[AGENTS.md](AGENTS.md)。
 
-- Four guided Japanese chapters
-- Normal / simulated malicious HTTP requests
-- Detection rule toggle
-- Deterministic ALLOW / BLOCK evaluation
-- Animated flow and step-by-step trace
-- Presenter mode and keyboard chapter shortcuts (Alt+Left/Right)
-- No backend, AWS account, or paid API required
+```bash
+npm run docs:check
+npm run docs:build
+```
+
+HTML 输出：`dist/developer-guide/index.html`。完整构建并运行 preview 后，访问其本地地址下的 `/developer-guide/`；App 侧栏也有入口。Markdown 是唯一文档源，生成 HTML 不提交 Git，不依赖 LLM。检查覆盖仓库全部 Markdown 的本地文件、链接、锚点，以及指南关键标识和实际文件清单。GitHub CI 自动运行测试和构建，不部署站点。
+
+## Static hosting / GitHub Pages
+
+Vite base 为 `./`。部署整个 `dist/`，保留 App 根入口与独立的 `developer-guide/`。当前仓库没有部署 workflow；本次不自动发布。公开 URL 仅在实际部署和验证后提供。
 
 ## Scope and accuracy
 
-This is an educational model, **not AWS WAF**. It assumes one simplified detection rule, a default ALLOW Web ACL action, and predetermined matches for the simulated malicious request. It does not implement actual AWS Managed Rules, HTTP parsing, rule priorities, CAPTCHA, labels, or real detection. Do not use its decisions for security validation.
+这是教学模型，**不是真实 AWS WAF**。条件来自预设样本，不解析或发送 HTTP、不进行真实攻击检测。Count 仅记录当前执行，不是持久指标。设置和前次结果仅保存在内存。全请求 Allow 规则是解释优先级的教学示例，不是生产配置建议。
 
-## Next versions
+未实现 SQLi、Managed Rules、Label、Rule Group、CAPTCHA 或 CloudFront 联动。条件与规则数量固定；仅启用、Action、Priority 和 Default Action 可编辑。
 
-- v0.2: Web ACL rule ordering, Count, labels, and match conditions
-- v0.3: WAF Service Explorer integrated into AWS FlowLab
-- v0.4: CloudFront / WAF architecture flows
+## Suggested LT sequence
+
+1. Chapter 01：发送正常和攻击样本，再关闭检测规则。
+2. Chapter 02：介绍 Web ACL、Condition、Match 与 Action，说明 Priority 数字越小越先执行。
+3. Chapter 03：攻击样本先 Block；交换顺序得到 Allow；恢复顺序并将检测改为 Count，观察继续评估；两条规则都设为 Count，切换 Default Action。
+
+## Next version
+
+v0.3 可加入具体请求字段、SQLi 示例与 Label，再逐步引入 Managed Rules 和 CloudFront 架构联动。
