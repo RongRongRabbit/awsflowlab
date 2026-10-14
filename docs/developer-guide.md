@@ -62,7 +62,7 @@ app.css：方向粒子、动作颜色、演讲与响应式布局
 
 <!-- code-ref:src/App.tsx#chapters -->
 
-Chapter 01 使用原有 User → WAF → Website 关系，固定 Block 检测和 Default Allow，保留请求选择与规则开关。Chapter 02 展示 Web ACL、Rule、Condition、Action、Priority、Default Action，并允许操作卡片。Chapter 03 通过相同配置系统进行顺序、Count 和默认动作实验。原第四章总结已合并到第三章末尾。总讲解时间约 4.5～5 分钟，这是内容预算，不是实际计时器。
+Chapter 01 使用原有 User → WAF → Website 关系，固定 Block 检测和 Default Allow，保留请求选择与规则开关。Chapter 02 是只读规则讲解，提供 Match / 终止、Count 继续、Default Action 三个固定例，用逐步按钮展示事件，规则设置只读。createLessonAcl 为每个例子创建独立配置，实验修改不会改变教学例。Chapter 03 才开放 Enabled、Action、Priority、Default Action 编辑和上次执行比较，使用个人实验配置进行顺序、Count 和默认动作实验。原第四章总结已合并到第三章末尾。总讲解时间约 4.5～5 分钟，这是内容预算，不是实际计时器。
 
 ```flow
 用户选择请求 / 修改 Enabled、Action、Priority、Default Action
@@ -73,11 +73,12 @@ createExecution → evaluateWaf → 保存事件，step = 0
 到达 destination → 停止计时，展示最终动作与本次 Count 数
 ```
 
+<!-- code-ref:src/App.tsx#createLessonAcl -->
 <!-- code-ref:src/App.tsx#send -->
 <!-- code-ref:src/App.tsx#changePriority -->
 <!-- code-ref:src/App.tsx#goChapter -->
 
-`send` 在上次执行已结束时保存其请求、规则动作、优先级和默认动作，用于与新结果比较。`changePriority` 保证输入非负整数；若与另一条规则相同则交换两者数值。`goChapter` 重置播放，但保留请求和规则配置。Alt + 左右切换章节，Esc 退出 Presenter Mode。Presenter Mode 是布局切换，并非浏览器全屏。
+`send` 在第三章上次执行已结束时保存其请求、规则动作、优先级和默认动作，用于与新结果比较。`changePriority` 保证输入非负整数；若与另一条规则相同则交换两者数值。`goChapter` 重置播放，但保留请求和实验规则配置。第二章切换固定例时选择攻击样本并重置播放；仍可选择正常请求观察 No Match。第二章从「例を確認」开始，仅手动逐步，最初から回到第一事件；第一、三章保留自动播放。Alt + 左右切换章节，Esc 退出 Presenter Mode。Presenter Mode 是布局切换，并非浏览器全屏。
 
 ## 规则模型与执行语义
 
@@ -131,7 +132,7 @@ break;
 
 ## 测试与质量检查
 
-[引擎测试](../src/services/waf/wafEngine.test.ts) 覆盖 v0.1 四组合、终止、Count 后继续、Priority 重叠、Default Allow / Block、禁用、No Match、空规则、配置校验、输入不变性和执行快照。[组件测试](../src/App.test.tsx) 覆盖三个章节、快捷键、Presenter、规则开关、顺序反转、Count、默认动作、自动推进、重播与重置。
+[引擎测试](../src/services/waf/wafEngine.test.ts) 覆盖 v0.1 四组合、终止、Count 后继续、Priority 重叠、Default Allow / Block、禁用、No Match、空规则、配置校验、输入不变性和执行快照。[组件测试](../src/App.test.tsx) 覆盖三个章节、第二章固定例无编辑入口及与第三章配置隔离、快捷键、Presenter、规则开关、顺序反转、Count、默认动作、自动推进、重播与重置。
 
 [文档生成器测试](../scripts/docs.test.mjs) 验证重复构建字节一致，以及缺失本地链接、章节锚点、代码标识和过期文件树会失败。GitHub CI 执行相同检查，不部署站点。
 

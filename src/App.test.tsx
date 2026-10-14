@@ -16,6 +16,45 @@ describe('beginner lessons', () => {
     expect(screen.getByRole('status').textContent).toContain('BLOCK'); fireEvent.click(screen.getByRole('checkbox', { name: '攻撃検知ルール' }));
     fireEvent.click(screen.getByRole('button', { name: '次のステップ →' })); for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole('button', { name: '次のステップ →' })); expect(screen.getByRole('status').textContent).toContain('ALLOW'); expect(document.querySelector('.waf small')?.textContent).toBe('DISABLED');
   });
+  it('chapter two presents read-only examples with manual Count and default evaluation', () => {
+    render(<App/>); next();
+    expect(screen.queryAllByRole('combobox')).toHaveLength(0);
+    expect(screen.queryAllByRole('spinbutton')).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: 'ルールの順番を入れ替え' })).toBeNull();
+    expect(screen.getByRole('region', { name: '固定ルールの設定' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '② Count は次へ' }));
+    fireEvent.click(screen.getByRole('button', { name: '例を確認' }));
+    expect(screen.queryByRole('status')).toBeNull();
+    for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));
+    expect(screen.getByRole('status').textContent).toContain('BLOCK');
+    expect(screen.getByRole('status').textContent).toContain('Count：1');
+    fireEvent.click(screen.getByRole('button', { name: '③ Default Action' }));
+    expect(screen.queryByRole('status')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '例を確認' }));
+    for (let i = 0; i < 4; i++) fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));
+    expect(screen.getByRole('status').textContent).toContain('ALLOW');
+    expect(screen.getByRole('status').textContent).toContain('Count：2');
+    expect(screen.queryByText(/前の実行：/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '最初から' }));
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByText('1 / 5')).toBeTruthy();
+  });
+  it('fixed examples stay independent while chapter three retains edits', () => {
+    render(<App/>); next(); next();
+    fireEvent.change(screen.getByLabelText('Default Action'), { target: { value: 'BLOCK' } });
+    fireEvent.click(screen.getByLabelText('攻撃の特徴を確認 Enabled'));
+    fireEvent.click(screen.getByLabelText('すべてのサンプルを確認 Enabled'));
+    fireEvent.click(screen.getByRole('button', { name: '前へ' }));
+    fireEvent.click(screen.getByRole('button', { name: '③ Default Action' }));
+    fireEvent.click(screen.getByRole('button', { name: '例を確認' }));
+    for (let i = 0; i < 4; i++) fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));
+    expect(screen.getByRole('status').textContent).toContain('ALLOW');
+    expect(screen.getByRole('status').textContent).toContain('Count：2');
+    next();
+    expect((screen.getByLabelText('Default Action') as HTMLSelectElement).value).toBe('BLOCK');
+    expect((screen.getByLabelText('攻撃の特徴を確認 Enabled') as HTMLInputElement).checked).toBe(false);
+    expect(screen.getByRole('button', { name: 'ルールの順番を入れ替え' })).toBeTruthy();
+  });
   it('renders only evaluated rules and priority swap changes outcome', () => {
     render(<App/>); next(); next(); fireEvent.click(screen.getByRole('button', { name: /攻撃サンプル/ })); fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));
     fireEvent.click(screen.getByRole('button', { name: '次のステップ →' })); fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));
