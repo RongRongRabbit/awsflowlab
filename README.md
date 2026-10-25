@@ -1,10 +1,10 @@
-# AWS FlowLab — AWS WAF Playground
+# AWS FlowLab — AWS Service Playground
 
-无需章节顺序的日语 AWS WAF 交互 Playground。选一个例子，点击发送，即可观察规则与最终结果。React / TypeScript / Vite 静态应用，不需要后端、AWS 账号或付费 API。
+无需章节顺序的日语 AWS WAF / ALB 交互 Playground。选一个例子，点击发送，即可观察规则与最终结果。React / TypeScript / Vite 静态应用，不需要后端、AWS 账号或付费 API。
 
 ## 在线体验
 
-[打开 AWS FlowLab（待 main 合并后首次部署与验证）](https://RongRongRabbit.github.io/awsflowlab/)。当前不宣称站点已经上线。
+[打开 AWS FlowLab](https://RongRongRabbit.github.io/awsflowlab/)。WAF 已上线；新增 ALB 内容在对应 PR 合并部署后可用。
 
 ## 本地运行
 
@@ -26,6 +26,17 @@ npm run dev
 - 自动播放、逐步、暂停、重播、前次结果比较、一键完整重置。
 - 六张日语知识卡自由展开；统一 Playground，可直接演示正常、攻击 Block 和 Count 场景。
 - Alt + 左右选择场景、键盘操作、响应式布局及减少动画偏好支持。
+
+## ALB Playground
+
+服务选择区切换 AWS WAF / ALB；切换会初始化配置和历史，避免后台播放。ALB 提供默认 Web、API 路径、图片路径与 Priority 重叠四个场景；选例不自动发送。
+
+- 选择 /、/api/users、/images/logo.png 等预设路径。
+- 观察按 Priority 执行的 Match / No Match、未评估规则、Forward 和最终应用。
+- 开关规则，在折叠高级设置中修改 Priority（1～50000）、规则目标与默认目标。
+- 自动播放、逐步、暂停、快照重播、完整重置、键盘场景切换及六张日语知识卡。
+
+纯本地路径路由模型，不发送 HTTP。每个 Target Group 只有一个正常应用；暂不模拟健康检查、多实例负载分配、TLS 或 WAF 联动。OFF 是教学操作。WAF 引擎和 ALB 引擎各自独立。
 
 ## 验证与文档
 

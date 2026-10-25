@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import App, { createScenario } from './App';
+import App from './App';
+import { createScenario } from './components/WafPlayground';
 import { evaluateWaf } from './services/waf/wafEngine';
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 const click = (name: string) => fireEvent.click(screen.getByRole('button', { name }));
