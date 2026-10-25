@@ -1,49 +1,80 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle2, CircleHelp, Expand, RotateCcw, ShieldCheck, ShieldX, Sparkles } from 'lucide-react';
-import { evaluateWaf, type RequestKind } from './services/waf/wafEngine';
+import { useEffect, useState } from 'react';
+import { Expand, ShieldCheck } from 'lucide-react';
+import { createDefaultAcl, type RequestKind, type Rule, type RuleAction, type WebAcl } from './services/waf/wafEngine';
+import { advanceStep, createExecution, type Execution } from './services/waf/playback';
+import { ExecutionTrace, RequestFlow } from './components/RequestFlow';
+import { KnowledgeCards, PlaygroundPanel, ServiceOverview } from './components/Playground';
 
-const chapters = [
-  {title:'AWS WAF ってなに？', time:'45秒', lead:'Web サイトを守る「セキュリティの門番」', description:'Web サイトへの HTTP / HTTPS リクエストを、設定したルールに基づいて確認するサービスです。'},
-  {title:'アクセスはどう判定される？', time:'75秒', lead:'リクエストを送ってみよう', description:'通常のアクセスと攻撃の特徴を持つアクセスを切り替え、どこで止まるかを確認します。'},
-  {title:'ルールを変えるとどうなる？', time:'90秒', lead:'同じリクエストでも結果が変わる', description:'検知ルールを OFF にして、同じサンプルリクエストをもう一度送ってみましょう。'},
-  {title:'まとめ', time:'45秒', lead:'AWS WAF はルールでアクセスをコントロール', description:'① リクエストを確認 ② ルールに照らして判断 ③ 許可またはブロック。'}
+export const scenarios = ['通常のリクエスト', '不審なリクエストを Block', 'Block を Count に変更', 'ルールの順番を変更'];
+export function createScenario(index: number): { kind: RequestKind; acl: WebAcl } {
+  const acl = createDefaultAcl();
+  if (index === 2) acl.rules[0].action = 'COUNT';
+  if (index === 3) [acl.rules[0].priority, acl.rules[1].priority] = [acl.rules[1].priority, acl.rules[0].priority];
+  return { kind: index === 0 ? 'normal' : 'attack', acl };
+}
+const knowledge = [
+  { title: 'AWS WAF とは？', text: 'Web アプリを保護するために、届くリクエストを確認するサービスです。この画面では通常と攻撃の特徴を持つサンプルで試せます。' },
+  { title: 'Web ACL', text: 'ルールと既定の動作をまとめた設定です。利用者とアプリの間で、リクエストをどう扱うか決めます。' },
+  { title: 'Rule & Condition', text: 'Rule は確認するルール、Condition は一致する条件です。Match なら指定した動作へ、No Match なら次のルールへ進みます。OFF のルールは確認しません。' },
+  { title: 'Action', text: 'Allow は許可、Block は拒否して判定を終了。Count は一致を記録し、次へ進みます。Count の数は今回のリクエストだけの記録です。' },
+  { title: 'Priority', text: '数字が小さいルールから確認します。Allow / Block で終了すると、後のルールは未評価です。「すべてに Allow」を先に置く例は順番を学ぶための設定です。' },
+  { title: 'Default Action', text: '最後まで Allow / Block が決まらなかった場合の動作です。Advanced Settings で両ルールを Count にして、Allow / Block を比べてみましょう。' },
 ];
-
 export default function App() {
-  const [chapter, setChapter] = useState(0);
   const [kind, setKind] = useState<RequestKind>('normal');
-  const [ruleEnabled, setRuleEnabled] = useState(true);
+  const [acl, setAcl] = useState<WebAcl>(createDefaultAcl);
+  const [execution, setExecution] = useState<Execution | null>(null);
   const [step, setStep] = useState(-1);
+  const [playing, setPlaying] = useState(false);
   const [presenter, setPresenter] = useState(false);
-  const result = useMemo(() => evaluateWaf(kind, ruleEnabled), [kind, ruleEnabled]);
-  const changeRequest = (value: RequestKind) => {setKind(value); setStep(-1);};
-  const changeRule = (value: boolean) => {setRuleEnabled(value); setStep(-1);};
-  const advance = () => setStep(current => Math.min(current + 1, 3));
-  const goChapter = (value: number) => {setChapter(Math.max(0, Math.min(3, value))); setStep(-1);};
+  const [intro, setIntro] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [playbackId, setPlaybackId] = useState(0);
+  const [scenario, setScenario] = useState<number | null>(0);
+  const [previous, setPrevious] = useState<string | null>(null);
+  const clear = () => { setPlaying(false); setExecution(null); setStep(-1); setDirty(false); setPrevious(null); };
+  const loadScenario = (index: number) => { const sample = createScenario(index); setKind(sample.kind); setAcl(sample.acl); setScenario(index); clear(); };
+  const reset = () => loadScenario(0);
+  const edited = () => { setPlaying(false); setDirty(true); setScenario(null); };
+  const updateRule = (id: string, patch: Partial<Rule>) => { setAcl(current => ({ ...current, rules: current.rules.map(rule => rule.id === id ? { ...rule, ...patch } : rule) })); edited(); };
+  const changePriority = (id: string, priority: number) => {
+    if (!Number.isSafeInteger(priority) || priority < 0) return;
+    setAcl(current => { const old = current.rules.find(rule => rule.id === id)!; return { ...current, rules: current.rules.map(rule => rule.id === id ? { ...rule, priority } : rule.priority === priority ? { ...rule, priority: old.priority } : rule) }; }); edited();
+  };
+  const send = (auto: boolean) => {
+    if (execution && step === execution.result.events.length - 1) setPrevious(`${execution.kind === 'normal' ? '通常' : '攻撃サンプル'} → ${execution.result.action} · ${execution.acl.rules.map(rule => `${rule.name}: ${rule.enabled ? rule.action : 'OFF'} (P${rule.priority})`).join(' / ')} · Default ${execution.acl.defaultAction}`);
+    setExecution(createExecution(kind, acl)); setStep(0); setPlaying(auto); setDirty(false); setPlaybackId(id => id + 1);
+  };
   useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' && e.altKey) goChapter(chapter + 1);
-      if (e.key === 'ArrowLeft' && e.altKey) goChapter(chapter - 1);
-      if (e.key === 'Escape') setPresenter(false);
+    const key = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPresenter(false);
+      if (event.altKey && ['ArrowLeft', 'ArrowRight'].includes(event.key)) { event.preventDefault(); loadScenario(((scenario ?? 0) + (event.key === 'ArrowRight' ? 1 : -1) + (intro ? 3 : 4)) % (intro ? 3 : 4)); }
     };
-    window.addEventListener('keydown', key);
-    return () => window.removeEventListener('keydown', key);
-  }, [chapter]);
-  const active = step >= 0;
-  const blocked = active && step >= 2 && result.action === 'BLOCK';
+    window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key);
+  }, [scenario, intro]);
+  useEffect(() => {
+    if (!playing || !execution) return;
+    if (step >= execution.result.events.length - 1) { setPlaying(false); return; }
+    const timer = window.setTimeout(() => setStep(current => advanceStep(current, execution.result)), 950);
+    return () => window.clearTimeout(timer);
+  }, [playing, execution, step]);
+  const complete = !!execution && step === execution.result.events.length - 1;
+  const current = execution?.result.events[step];
+  const actionControl = (rule: Rule) => <label>Action <select aria-label={`${rule.name} Action`} value={rule.action} onChange={event => updateRule(rule.id, { action: event.target.value as RuleAction })}><option value="ALLOW">Allow</option><option value="BLOCK">Block</option><option value="COUNT">Count</option></select></label>;
   return <div className={`app ${presenter ? 'presenter' : ''}`}>
-    <header className="topbar"><div className="brand"><ShieldCheck size={24}/><span>AWS <b>FlowLab</b></span><span className="version">v0.1</span></div><div className="header-actions"><span className="duration">初心者向け · 約5分</span><button className="ghost" onClick={() => setPresenter(!presenter)}><Expand size={16}/>{presenter ? '通常表示' : '発表モード'}</button></div></header>
-    <main className="layout"><aside className="sidebar"><div className="eyebrow">LEARNING PATH</div><h2>AWS WAF Basics</h2><p className="muted">4つのステップで学ぼう</p><nav>{chapters.map((item,i) => <button key={i} className={`chapter ${chapter===i?'selected':''}`} onClick={() => goChapter(i)}><span className="chapter-number">0{i+1}</span><span><strong>{item.title}</strong><small>{item.time}</small></span></button>)}</nav><div className="sidebar-note"><CircleHelp size={18}/>実際の AWS リソースは使用しません。</div></aside>
-    <section className="main"><div className="intro"><div className="eyebrow">CHAPTER 0{chapter+1} / 04</div><h1>{chapters[chapter].title}</h1><p className="lead">{chapters[chapter].lead}</p><p className="description">{chapters[chapter].description}</p></div>
-      <div className="demo"><div className="demo-heading"><span className="live-dot"/> INTERACTIVE DEMO <span className="demo-hint">クリックして動きを確認</span></div>
-        <div className="diagram"><div className={`node visitor ${active?'activated':''}`}><div className="node-icon">👤</div><strong>利用者</strong><small>HTTP Request</small></div><div className={`link ${step>=0?'flowing':''}`}><span className="particle"/><span className="link-label">リクエスト</span></div><div className={`node waf ${step>=1?'activated':''}`}><ShieldCheck size={42}/><strong>AWS WAF</strong><small>ルールをチェック</small>{step>=1 && <span className="check-pill">{result.matched?'MATCH':'CHECKED'}</span>}</div><div className={`link ${step>=3&&!blocked?'flowing':''} ${blocked?'blocked':''}`}><span className="particle"/><span className="link-label">{blocked?'BLOCK':'ALLOW ?'}</span></div><div className={`node website ${step===3&&!blocked?'activated':''} ${blocked?'disabled':''}`}><div className="node-icon">🌐</div><strong>Web サイト</strong><small>{blocked?'到達しない':step===3?'アクセス到達':'保護対象'}</small></div></div>
-        <div className="controls"><div className="control-group"><label>アクセスの種類</label><div className="segmented"><button className={kind==='normal'?'active':''} onClick={() => changeRequest('normal')}>🙂 通常アクセス</button><button className={kind==='attack'?'active':''} onClick={() => changeRequest('attack')}>⚠️ 不正アクセス（例）</button></div></div><div className="control-group"><label htmlFor="rule">攻撃検知ルール</label><label className="toggle"><input id="rule" type="checkbox" checked={ruleEnabled} onChange={e=>changeRule(e.target.checked)}/><span className="switch"/><b>{ruleEnabled?'ON':'OFF'}</b></label></div></div>
-        <div className="execution"><div className="execution-title"><strong>実行ステップ</strong><span>{step<0?'準備完了':`${step+1} / 4`}</span></div><div className="timeline">{result.trace.map((t,i)=><div key={i} className={`trace ${i===step?'current':''} ${i<step?'completed':''}`}><span className="trace-mark">{i<step?'✓':i+1}</span><div><strong>{t.title}</strong>{i===step&&<p>{t.detail}</p>}</div></div>)}</div><div className="demo-actions"><button className="primary" onClick={advance} disabled={step===3}>{step<0?'▶ リクエスト送信':step===3?'実行完了':'次のステップ →'}</button><button className="ghost" onClick={()=>setStep(-1)}><RotateCcw size={16}/>リセット</button></div></div>
-        {step===3&&<div className={`result ${result.action==='BLOCK'?'danger':'success'}`}>{result.action==='BLOCK'?<ShieldX size={24}/>:<CheckCircle2 size={24}/>}<div><strong>最終結果：{result.action}</strong><p>{result.trace[3].detail}</p></div></div>}
-      </div>
-      <div className="lesson"><Sparkles size={18}/><p>{chapter===0?'AWS WAF は、Web サイトに届く前のリクエストをルールで確認します。':chapter===1?'不正アクセスを防ぐには、検知するためのルールが必要です。':chapter===2?'ルールを OFF にすると、この例では攻撃の特徴を持つリクエストも通過します。':'AWS WAF は万能ではありません。適切なルール設定と継続的な見直しが大切です。'}</p></div>
-      <div className="navigation"><button className="ghost" disabled={chapter===0} onClick={()=>goChapter(chapter-1)}><ArrowLeft size={16}/>前へ</button><span>{chapter+1} / 4</span><button className="primary" disabled={chapter===3} onClick={()=>goChapter(chapter+1)}>次の章へ<ArrowRight size={16}/></button></div>
-      <p className="disclaimer">※ 教育目的の簡易シミュレーションです。実際の検知結果は Web ACL のルール、優先順位、リクエスト内容などによって異なります。ルールが一致しない場合は Web ACL のデフォルト動作が適用されます。</p>
-    </section></main>
+    <header className="topbar"><div className="brand"><ShieldCheck size={23}/>AWS <b>FlowLab</b></div><div className="header-actions"><a href={'/awsflowlab/developer-guide/'}>Developer Guide</a><button className="ghost" aria-pressed={presenter} onClick={() => setPresenter(!presenter)}><Expand size={16}/>{presenter ? '通常表示' : '発表モード'}</button></div></header>
+    <main className="playground"><ServiceOverview><button className="ghost mode-button" aria-pressed={intro} onClick={() => { setIntro(!intro); reset(); }}>{intro ? 'Playground に戻る' : 'Hands-on 紹介モード'}</button></ServiceOverview>
+    {intro && <div className="intro-banner"><strong>Hands-on の前に · 3〜5分</strong><p>① 通常のリクエストが届く → ② 攻撃サンプルを止める → ③ Count に変えると？ 各例を選んで送信しましょう。</p><span>WAF はアプリの手前でリクエストを確認します。詳しい設定操作は Hands-on で体験します。</span></div>}
+    <PlaygroundPanel title={intro ? '紹介する例' : 'まずは例を選んでみよう'} className="scenario-panel"><div className="scenario-grid">{scenarios.slice(0, intro ? 3 : 4).map((name, index) => <button key={name} className={`scenario ${scenario === index ? 'selected' : ''}`} aria-pressed={scenario === index} onClick={() => loadScenario(index)}><span>0{index + 1}</span>{name}</button>)}</div><p className="muted">設定だけを読み込みます。「リクエストを送信」で動きを確認。Alt + ← / → で例を選択できます。</p></PlaygroundPanel>
+    <PlaygroundPanel title="リクエストの動きを見る" className="visualization"><div className="visual-heading"><span className="live-dot"/><span>HTTP REQUEST → RULE EVALUATION → FINAL DECISION</span></div><RequestFlow key={playbackId} execution={execution} step={step} rules={acl.rules} detailed={!intro}/>
+    <div className="execution"><div className="execution-title"><strong>{execution ? `${step + 1} / ${execution.result.events.length}` : '例を選ぶ → 送信 → 設定を変えて再送信'}</strong><span>{playing ? '再生中' : '準備完了'}</span></div>{dirty && <p className="config-notice">設定が変わりました。再送信で反映します。表示中の実行は前の設定です。</p>}
+    <div className="demo-actions"><button className="primary" onClick={() => send(true)}>▶ リクエストを送信</button><button className="ghost" onClick={reset}>リセット</button></div><div aria-live="polite">{current && !complete && <div className="current-explanation"><strong>{current.title} {current.status}</strong><p>{current.detail}</p></div>}</div>
+    {complete && <div className={`result ${execution.result.action === 'BLOCK' ? 'danger' : 'success'}`} role="status"><div><strong>最終結果：{execution.result.action}</strong><p>{current?.detail}</p><p>Count：{execution.result.countedRuleIds.length} 件（このリクエスト）</p></div></div>}
+    <details className="trace-history"><summary>ステップごとに確認・再生</summary><div className="demo-actions"><button className="ghost" onClick={() => { if (!execution || complete || dirty) send(false); else { setPlaying(false); setStep(advanceStep(step, execution.result)); } }}>次のステップ →</button><button className="ghost" disabled={!playing} onClick={() => setPlaying(false)}>一時停止</button><button className="ghost" disabled={!execution} onClick={() => { setStep(0); setPlaying(true); setPlaybackId(id => id + 1); }}>再生</button></div>{execution && <ExecutionTrace result={execution.result} step={step}/>}</details>
+    {previous && <details className="previous"><summary>前の結果と比較</summary><p>{previous}</p></details>}</div></PlaygroundPanel>
+    {!intro && <PlaygroundPanel title="設定を変えて試す" className="control-panel"><div className="basic-controls"><div className="segmented">{(['normal', 'attack'] as const).map(value => <button key={value} aria-pressed={kind === value} className={kind === value ? 'active' : ''} onClick={() => { setKind(value); edited(); }}>{value === 'normal' ? '通常アクセス' : '攻撃サンプル'}</button>)}</div><label><input type="checkbox" aria-label="攻撃検知ルール" checked={acl.rules[0].enabled} onChange={event => updateRule('attack', { enabled: event.target.checked })}/>攻撃検知ルール {acl.rules[0].enabled ? 'ON' : 'OFF'}</label>{actionControl(acl.rules[0])}</div>
+    <details className="advanced"><summary>Advanced Settings · 優先順位と既定の動作</summary><div className="rule-editor">{[...acl.rules].sort((a, b) => a.priority - b.priority).map(rule => <fieldset key={rule.id}><legend>{rule.name}</legend><label><input type="checkbox" aria-label={`${rule.name} Enabled`} checked={rule.enabled} onChange={event => updateRule(rule.id, { enabled: event.target.checked })}/>ON / OFF</label><span>条件：{rule.condition === 'attack' ? '攻撃サンプル' : 'すべてのサンプル'}</span>{rule.id !== 'attack' && actionControl(rule)}<label>Priority <input type="number" min="0" step="1" aria-label={`${rule.name} Priority`} value={rule.priority} onChange={event => { if (event.target.value !== '') changePriority(rule.id, Number(event.target.value)); }}/></label></fieldset>)}<label>Default Action <select aria-label="Default Action" value={acl.defaultAction} onChange={event => { setAcl(currentAcl => ({ ...currentAcl, defaultAction: event.target.value as 'ALLOW' | 'BLOCK' })); edited(); }}><option value="ALLOW">Allow</option><option value="BLOCK">Block</option></select></label><p className="muted">小さい Priority から確認。同じ数字を入力すると順番を交換します。全リクエストの Allow は優先順位を学ぶための例です。</p></div></details></PlaygroundPanel>}
+    {!intro && <PlaygroundPanel title="気になることから学ぶ"><KnowledgeCards cards={knowledge}/></PlaygroundPanel>}
+    <p className="disclaimer">※ 教育用の簡易モデルです。実際の AWS WAF ではありません。HTTP 解析・攻撃検知・AWS 接続は行いません。設定はブラウザーのメモリー内のみで、再読み込みで初期化されます。</p></main>
   </div>;
 }
