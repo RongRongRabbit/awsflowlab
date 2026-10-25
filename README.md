@@ -24,8 +24,8 @@ npm run dev
 - 基础请求选择、Rule ON/OFF、Action；高级折叠区提供 Priority、第二条规则与 Default Action。
 - Allow / Block 终止，Count 继续，较小 Priority 优先；Match、No Match、禁用及未评估有独立状态。
 - 自动播放、逐步、暂停、重播、前次结果比较、一键完整重置。
-- 六张日语知识卡自由展开；Hands-on 介绍模式提供 3～5 分钟架构与正常/攻击/Count 演示。
-- Presenter Mode、Esc 退出、Alt + 左右选择场景、键盘操作、响应式布局及减少动画偏好支持。
+- 六张日语知识卡自由展开；统一 Playground，可直接演示正常、攻击 Block 和 Count 场景。
+- Alt + 左右选择场景、键盘操作、响应式布局及减少动画偏好支持。
 
 ## 验证与文档
 
