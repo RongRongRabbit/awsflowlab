@@ -1,123 +1,64 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import App from './App';
+import App, { createScenario } from './App';
+import { evaluateWaf } from './services/waf/wafEngine';
 afterEach(() => { cleanup(); vi.useRealTimers(); });
-const next = () => fireEvent.click(screen.getByRole('button', { name: '次の章へ' }));
-describe('beginner lessons', () => {
-  it('navigates all three chapters and presenter keyboard shortcuts', () => {
-    render(<App/>); expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('AWS WAF とは？');
-    next(); expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('WAF ルールの仕組み'); next(); expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('ルールを変えて試してみよう！');
-    fireEvent.keyDown(window, { key: 'ArrowLeft', altKey: true }); expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('WAF ルールの仕組み');
-    fireEvent.click(screen.getByRole('button', { name: '発表モード' })); expect(document.querySelector('.presenter')).not.toBeNull(); fireEvent.keyDown(window, { key: 'Escape' }); expect(document.querySelector('.presenter')).toBeNull();
+const click = (name: string) => fireEvent.click(screen.getByRole('button', { name }));
+const finish = () => { click('次のステップ →'); for (let i = 0; i < 6 && !screen.queryByRole('status'); i++) click('次のステップ →'); };
+describe('WAF playground', () => {
+  it('loads independent scenarios without executing them', () => {
+    render(<App/>);
+    const expected = ['ALLOW', 'BLOCK', 'ALLOW', 'ALLOW'];
+    for (let index = 0; index < 4; index++) {
+      const sample = createScenario(index);
+      expect(evaluateWaf(sample.kind, sample.acl).action).toBe(expected[index]);
+    }
+    click('02 不審なリクエストを Block'); expect(screen.queryByRole('status')).toBeNull();
+    finish(); expect(screen.getByRole('status').textContent).toContain('BLOCK');
+    expect(screen.getByText('未評価（前のルールで終了）')).toBeTruthy();
+    click('04 ルールの順番を変更'); expect(screen.queryByRole('status')).toBeNull(); finish(); expect(screen.getByRole('status').textContent).toContain('ALLOW');
   });
-  it('keeps initial result hidden and preserves v0.1 toggle behavior', () => {
-    render(<App/>); expect(document.querySelectorAll('.diagram > .node')).toHaveLength(3); expect(document.querySelector('.diagram .acl')).toBeNull(); expect(screen.queryByRole('status')).toBeNull(); fireEvent.click(screen.getByRole('button', { name: /攻撃サンプル/ }));
-    fireEvent.click(screen.getByRole('button', { name: '次のステップ →' })); for (let i = 0; i < 2; i++) fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));
-    expect(screen.getByRole('status').textContent).toContain('BLOCK'); fireEvent.click(screen.getByRole('checkbox', { name: '攻撃検知ルール' }));
-    fireEvent.click(screen.getByRole('button', { name: '次のステップ →' })); for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole('button', { name: '次のステップ →' })); expect(screen.getByRole('status').textContent).toContain('ALLOW'); expect(document.querySelector('.waf small')?.textContent).toBe('DISABLED');
-  });
-  it('chapter two presents read-only examples with manual Count and default evaluation', () => {
-    render(<App/>); next();
-    expect(screen.queryAllByRole('combobox')).toHaveLength(0);
-    expect(screen.queryAllByRole('spinbutton')).toHaveLength(0);
-    expect(screen.queryByRole('button', { name: 'ルールの順番を入れ替え' })).toBeNull();
-    expect(screen.queryByRole('region', { name: '固定ルールの設定' })).toBeNull();
-    expect(screen.queryByText('Web ACL の設定')).toBeNull();
-    expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
-    expect(screen.queryByRole('button', { name: /通常アクセス/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /攻撃サンプル/ })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: '② Count は次へ' }));
-    fireEvent.click(screen.getByRole('button', { name: '例を確認' }));
-    expect(screen.queryByRole('status')).toBeNull();
-    for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));
-    expect(screen.getByRole('status').textContent).toContain('BLOCK');
-    expect(screen.getByRole('status').textContent).toContain('Count：1');
-    fireEvent.click(screen.getByRole('button', { name: '③ Default Action' }));
-    expect(screen.queryByRole('status')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: '例を確認' }));
-    for (let i = 0; i < 4; i++) fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));
-    expect(screen.getByRole('status').textContent).toContain('ALLOW');
-    expect(screen.getByRole('status').textContent).toContain('Count：2');
-    expect(screen.queryByText(/前の実行：/)).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: '最初から' }));
-    expect(screen.queryByRole('status')).toBeNull();
-    expect(screen.getByText('1 / 5')).toBeTruthy();
-  });
-  it('fixed examples stay independent while chapter three retains edits', () => {
-    render(<App/>); next(); next(); fireEvent.click(screen.getByRole('button', { name: '詳しい設定を開く' }));
+  it('keeps beginner toggle, Count and editable default behavior', () => {
+    render(<App/>); click('攻撃サンプル'); finish(); expect(screen.getByRole('status').textContent).toContain('BLOCK');
+    fireEvent.click(screen.getByLabelText('攻撃検知ルール')); finish(); expect(screen.getByRole('status').textContent).toContain('ALLOW');
+    fireEvent.click(screen.getByLabelText('攻撃検知ルール'));
+    fireEvent.change(screen.getByLabelText('攻撃の特徴を確認 Action'), { target: { value: 'COUNT' } });
+    fireEvent.change(screen.getByLabelText('すべてのサンプルを確認 Action'), { target: { value: 'COUNT' } });
     fireEvent.change(screen.getByLabelText('Default Action'), { target: { value: 'BLOCK' } });
-    fireEvent.click(screen.getByLabelText('攻撃の特徴を確認 Enabled'));
-    fireEvent.click(screen.getByLabelText('すべてのサンプルを確認 Enabled'));
-    fireEvent.click(screen.getByRole('button', { name: '前へ' }));
-    fireEvent.click(screen.getByRole('button', { name: '③ Default Action' }));
-    fireEvent.click(screen.getByRole('button', { name: '例を確認' }));
-    for (let i = 0; i < 4; i++) fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));
-    expect(screen.getByRole('status').textContent).toContain('ALLOW');
-    expect(screen.getByRole('status').textContent).toContain('Count：2');
-    next();
-    expect((screen.getByLabelText('Default Action') as HTMLSelectElement).value).toBe('BLOCK');
-    expect((screen.getByLabelText('攻撃の特徴を確認 Enabled') as HTMLInputElement).checked).toBe(false);
-    expect(screen.getByRole('button', { name: 'ルールの順番を入れ替え' })).toBeTruthy();
-    expect(screen.getByText('Web ACL の設定')).toBeTruthy();
+    finish(); expect(screen.getByRole('status').textContent).toContain('BLOCK'); expect(screen.getByRole('status').textContent).toContain('Count：2');
+    expect(screen.getByText('前の結果と比較').closest('details')?.textContent).toContain('ALLOW');
   });
-  it('renders only evaluated rules and priority swap changes outcome', () => {
-    render(<App/>); next(); next(); fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));
-    fireEvent.click(screen.getByRole('button', { name: '次のステップ →' })); fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));
-    expect(screen.getByRole('status').textContent).toContain('BLOCK'); expect(screen.getByText('未評価（前のルールで終了）')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'ルールの順番を入れ替え' })); fireEvent.click(screen.getByRole('button', { name: '次のステップ →' })); fireEvent.click(screen.getByRole('button', { name: '次のステップ →' })); fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));
-    expect(screen.getByRole('status').textContent).toContain('ALLOW'); expect(screen.getByText(/前の実行：/).textContent).toContain('BLOCK');
+  it('exchanges duplicate priorities and rejects negative or fractional priorities', () => {
+    render(<App/>); click('攻撃サンプル');
+    const input = screen.getByLabelText('攻撃の特徴を確認 Priority') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: '-1' } }); expect(input.value).toBe('10');
+    fireEvent.change(input, { target: { value: '1.5' } }); expect(input.value).toBe('10');
+    fireEvent.change(input, { target: { value: '20' } }); expect((screen.getByLabelText('すべてのサンプルを確認 Priority') as HTMLInputElement).value).toBe('10');
+    finish(); expect(screen.getByRole('status').textContent).toContain('ALLOW');
   });
-  it('Count continues and disabled rules fall back to editable default', () => {
-    render(<App/>); next(); next(); fireEvent.click(screen.getByRole('button', { name: '詳しい設定を開く' })); fireEvent.click(screen.getByRole('button', { name: /攻撃サンプル/ }));
-    fireEvent.change(screen.getByLabelText('攻撃の特徴を確認 Action'), { target: { value: 'COUNT' } }); fireEvent.change(screen.getByLabelText('すべてのサンプルを確認 Action'), { target: { value: 'COUNT' } }); fireEvent.change(screen.getByLabelText('Default Action'), { target: { value: 'BLOCK' } });
-    fireEvent.click(screen.getByRole('button', { name: '次のステップ →' })); for (let i = 0; i < 4; i++) fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));
-    expect(screen.getByRole('status').textContent).toContain('BLOCK'); expect(screen.getByRole('status').textContent).toContain('Count：2'); expect(screen.getAllByText('COUNT').length).toBe(2);
-    fireEvent.click(screen.getByLabelText('攻撃の特徴を確認 Enabled')); fireEvent.click(screen.getByLabelText('すべてのサンプルを確認 Enabled')); fireEvent.click(screen.getByRole('button', { name: '次のステップ →' })); for (let i = 0; i < 4; i++) fireEvent.click(screen.getByRole('button', { name: '次のステップ →' })); expect(screen.getByRole('status').textContent).toContain('Count：0');
+  it('provides collapsed knowledge and advanced controls', () => {
+    render(<App/>); expect(document.querySelectorAll('.knowledge-grid details')).toHaveLength(6);
+    const card = screen.getByText('Action', { selector: 'summary' }).closest('details')!;
+    expect(card.open).toBe(false); fireEvent.click(card.querySelector('summary')!); expect(card.open).toBe(true);
+    fireEvent.click(card.querySelector('summary')!); expect(card.open).toBe(false);
+    expect(screen.getByText(/Advanced Settings/, { selector: 'summary' }).closest('details')?.open).toBe(false);
   });
-  it('reveals glossary and step history only on demand', () => {
-    render(<App/>); next();
-    const glossary = screen.getByText('用語を確認する').closest('details')!;
-    expect(glossary.open).toBe(false);
-    expect(document.querySelector('.concepts')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: '例を確認' }));
-    expect(document.querySelector('.current-explanation')?.textContent).toContain('リクエストを送信');
-    expect(screen.getByText('これまでの流れを見る').closest('details')?.open).toBe(false);
-    fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));
-    expect(document.querySelector('.current-explanation')?.textContent).toContain('MATCH');
+  it('offers a minimal introduction, presenter and keyboard navigation with reset', () => {
+    render(<App/>); click('Hands-on 紹介モード'); expect(screen.queryByLabelText('Default Action')).toBeNull();
+    expect(screen.queryByText('気になることから学ぶ')).toBeNull(); expect(document.querySelectorAll('.diagram > .node')).toHaveLength(3);
+    finish(); expect(screen.getByRole('status').textContent).toContain('ALLOW');
+    fireEvent.keyDown(window, { key: 'ArrowRight', altKey: true }); finish(); expect(screen.getByRole('status').textContent).toContain('BLOCK');
+    click('03 Block を Count に変更'); finish(); expect(screen.getByRole('status').textContent).toContain('Count：1');
+    click('発表モード'); expect(document.querySelector('.presenter')).toBeTruthy(); fireEvent.keyDown(window, { key: 'Escape' }); expect(document.querySelector('.presenter')).toBeNull();
+    click('リセット'); expect(screen.queryByRole('status')).toBeNull(); click('Playground に戻る'); expect(screen.getByLabelText('Default Action')).toBeTruthy();
   });
-  it('guides one change at a time through order, Count and default action', () => {
-    render(<App/>); next(); next();
-    expect(screen.queryByText('Web ACL の設定')).toBeNull();
-    expect(screen.queryAllByRole('combobox')).toHaveLength(0);
-    const run = () => {
-      fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));
-      for (let i = 0; i < 6 && !screen.queryByRole('status'); i++) fireEvent.click(screen.getByRole('button', { name: '次のステップ →' }));
-    };
-    expect((screen.getByRole('button', { name: '次の練習へ →' }) as HTMLButtonElement).disabled).toBe(true);
-    run(); expect(screen.getByRole('status').textContent).toContain('BLOCK');
-    fireEvent.click(screen.getByRole('button', { name: 'ルールの順番を入れ替え' }));
-    expect((screen.getByRole('button', { name: '次の練習へ →' }) as HTMLButtonElement).disabled).toBe(true);
-    run(); expect(screen.getByRole('status').textContent).toContain('ALLOW');
-    expect(screen.getByText(/前の結果：/).textContent).toContain('BLOCK');
-    fireEvent.click(screen.getByRole('button', { name: '次の練習へ →' }));
-    expect(screen.getByText('練習 2 / 3：記録して次へ進める')).toBeTruthy();
-    run(); fireEvent.change(screen.getByLabelText('検知ルールの動作'), { target: { value: 'COUNT' } });
-    run(); expect(screen.getByRole('status').textContent).toContain('Count：1');
-    expect(screen.getByRole('status').textContent).toContain('BLOCK');
-    fireEvent.click(screen.getByRole('button', { name: '次の練習へ →' }));
-    run(); expect(screen.getByRole('status').textContent).toContain('ALLOW');
-    fireEvent.change(screen.getByLabelText('練習の Default Action'), { target: { value: 'BLOCK' } });
-    run(); expect(screen.getByRole('status').textContent).toContain('BLOCK');
-    expect(screen.getByRole('status').textContent).toContain('Count：2');
-    fireEvent.click(screen.getByRole('button', { name: '詳しい設定を開く' }));
-    expect(screen.getByText('Web ACL の設定')).toBeTruthy();
-    expect(screen.getByLabelText('攻撃の特徴を確認 Enabled')).toBeTruthy();
-  });
-  it('automatic playback stops at result and configuration cannot alter its snapshot', () => {
-    vi.useFakeTimers(); render(<App/>); fireEvent.click(screen.getByRole('button', { name: /攻撃サンプル/ })); fireEvent.click(screen.getByRole('button', { name: '▶ リクエストを送信' }));
-    act(() => { vi.advanceTimersByTime(950); }); expect(document.querySelector('.diagram > .waf.activated')).not.toBeNull();
-    fireEvent.click(screen.getByRole('checkbox', { name: '攻撃検知ルール' })); expect(screen.getByText(/設定が変わりました/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '再生' })); for (let i = 0; i < 3; i++) act(() => { vi.advanceTimersByTime(950); }); expect(screen.getByRole('status').textContent).toContain('BLOCK'); expect(vi.getTimerCount()).toBe(0);
-    fireEvent.click(screen.getByRole('button', { name: 'リセット' })); expect(screen.queryByRole('status')).toBeNull(); expect(document.querySelector('.flowing')).toBeNull();
+  it('plays real events, pauses on edits, replays snapshots and resets all settings', () => {
+    vi.useFakeTimers(); render(<App/>); click('攻撃サンプル'); click('▶ リクエストを送信');
+    act(() => { vi.advanceTimersByTime(950); }); expect(document.querySelector('.rule-node.activated')?.textContent).toContain('MATCH');
+    click('一時停止'); expect(vi.getTimerCount()).toBe(0);
+    fireEvent.click(screen.getByLabelText('攻撃検知ルール')); expect(screen.getByText(/設定が変わりました/)).toBeTruthy();
+    click('再生'); for (let i = 0; i < 4; i++) act(() => { vi.advanceTimersByTime(950); });
+    expect(screen.getByRole('status').textContent).toContain('BLOCK'); expect(vi.getTimerCount()).toBe(0);
+    click('リセット'); expect(screen.queryByRole('status')).toBeNull(); expect(document.querySelector('.flowing')).toBeNull(); expect((screen.getByLabelText('攻撃検知ルール') as HTMLInputElement).checked).toBe(true);
   });
 });

@@ -1,7 +1,7 @@
 name: Quality checks
 on:
   push:
-    branches: [main, feature/waf-v0.2]
+    branches: [main, 'feature/**']
   pull_request:
     branches: [main]
 permissions:

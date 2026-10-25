@@ -1,69 +1,52 @@
-# AWS FlowLab v0.2 — AWS WAF Basics
+# AWS FlowLab — AWS WAF Playground
 
-日语 AWS WAF 初学者交互课程，适合约 5 分钟 LT 和自主学习。基于 React、TypeScript、Vite，无后端、AWS 账号或付费 API。
+无需章节顺序的日语 AWS WAF 交互 Playground。选一个例子，点击发送，即可观察规则与最终结果。React / TypeScript / Vite 静态应用，不需要后端、AWS 账号或付费 API。
 
-## Run locally
+## 在线体验
 
-Requires Node.js 22.12+, 24.x, or 26+ (development verified with Node.js 24).
+[打开 AWS FlowLab（待 main 合并后首次部署与验证）](https://RongRongRabbit.github.io/awsflowlab/)。当前不宣称站点已经上线。
 
-Vite 8 / React plugin 6 and Vitest 5 retain the existing framework; tool versions were updated to resolve audit findings.
+## 本地运行
+
+Node.js 22.12+、24.x 或 26+。
 
 ```bash
 npm ci
 npm run dev
 ```
 
-## Features
+访问开发服务器的 `/awsflowlab/`。
 
-- 三章：AWS WAF とは？ / WAF ルールの仕組み / ルールを変えて試してみよう！
-- 第二章为只读固定例讲解（Match / 终止、Count 继续、Default Action），仅保留功能讲解、流程与逐步操作，不显示 Web ACL 设置区或请求选择；第三章按顺序、Count、默认动作三个任务逐步引导；完整编辑在「詳しい設定を開く」中，教学例不受实验配置影响。
-- 正常与攻击样本、Enabled、Allow / Block / Count、Priority、Default Action。
-- 按优先级执行，Allow / Block 终止，Count 继续；重叠规则展示顺序影响。
-- 执行快照驱动动画、Match / No Match、禁用与未评估状态。
-- 默认突出一个学习点及当前步骤，术语、历史轨迹、上次详细设置按需展开。
-- 自动播放、逐步执行、暂停、重新播放、重置、前次结果比较。
-- Presenter Mode、Alt+Left/Right 章节切换、Esc 退出演讲布局。
-- 桌面与手机浏览、减少动画偏好支持。
+## 功能
 
-## Checks and build
+- 单页服务概览、User → WAF → Application 架构、真实模拟事件驱动的请求动画。
+- 四个场景仅加载配置：正常、攻击 Block、Block 改 Count、Priority 反转；由用户手动发送。
+- 基础请求选择、Rule ON/OFF、Action；高级折叠区提供 Priority、第二条规则与 Default Action。
+- Allow / Block 终止，Count 继续，较小 Priority 优先；Match、No Match、禁用及未评估有独立状态。
+- 自动播放、逐步、暂停、重播、前次结果比较、一键完整重置。
+- 六张日语知识卡自由展开；Hands-on 介绍模式提供 3～5 分钟架构与正常/攻击/Count 演示。
+- Presenter Mode、Esc 退出、Alt + 左右选择场景、键盘操作、响应式布局及减少动画偏好支持。
+
+## 验证与文档
 
 ```bash
 npm test
 npm run typecheck
-npm run docs:check
 npm run build
+npm run docs:check
 npm run preview
 ```
 
-`build` 包含类型检查、App 打包及 Developer Guide 构建。`test:watch` 用于开发测试。
+构建包含文档生成；preview 下访问 `/awsflowlab/` 和 `/awsflowlab/developer-guide/`。
 
-## Developer Guide
+[中文 Developer Guide](docs/developer-guide.md) 是文档源，[AGENTS.md](AGENTS.md) 是维护规范。单独构建使用 `npm run docs:build`；生成 HTML 不手工编辑、不提交。
 
-中文源文件：[docs/developer-guide.md](docs/developer-guide.md)。长期维护规范：[AGENTS.md](AGENTS.md)。
+## GitHub Pages
 
-```bash
-npm run docs:check
-npm run docs:build
-```
+现有 Quality checks 检查 feature 分支与 PR。新增 Pages workflow 仅在 main 更新后构建、验证并发布整个 dist，包含 App 与 developer-guide/。Vite base 与实际仓库 awsflowlab 对应，为 `/awsflowlab/`。
 
-HTML 输出：`dist/developer-guide/index.html`。完整构建并运行 preview 后，访问其本地地址下的 `/developer-guide/`；App 侧栏也有入口。Markdown 是唯一文档源，生成 HTML 不提交 Git，不依赖 LLM。检查覆盖仓库全部 Markdown 的本地文件、链接、锚点，以及指南关键标识和实际文件清单。GitHub CI 自动运行测试和构建，不部署站点。
+首次发布前，在 Settings → Pages → Build and deployment 选择 **GitHub Actions**，允许仓库运行 Actions；如 github-pages 环境需要审批，由维护者审批。合并 PR 后检查 Deploy GitHub Pages 成功，并验证桌面、手机交互与指南入口。正式可用性以实际部署和访问验证为准。
 
-## Static hosting / GitHub Pages
+## 模拟范围
 
-Vite base 为 `./`。部署整个 `dist/`，保留 App 根入口与独立的 `developer-guide/`。当前仓库没有部署 workflow；本次不自动发布。公开 URL 仅在实际部署和验证后提供。
-
-## Scope and accuracy
-
-这是教学模型，**不是真实 AWS WAF**。条件来自预设样本，不解析或发送 HTTP、不进行真实攻击检测。Count 仅记录当前执行，不是持久指标。设置和前次结果仅保存在内存。全请求 Allow 规则是解释优先级的教学示例，不是生产配置建议。
-
-未实现 SQLi、Managed Rules、Label、Rule Group、CAPTCHA 或 CloudFront 联动。条件与规则数量固定；仅启用、Action、Priority 和 Default Action 可编辑。
-
-## Suggested LT sequence
-
-1. Chapter 01：发送正常和攻击样本，再关闭检测规则。
-2. Chapter 02：介绍 Web ACL、Condition、Match 与 Action，说明 Priority 数字越小越先执行。
-3. Chapter 03：先点击「この練習を準備」，发送样本，再交换顺序并重发；进入下一任务，只修改 Count；最后一个任务只修改 Default Action。完整设置按需展开。
-
-## Next version
-
-v0.3 可加入具体请求字段、SQLi 示例与 Label，再逐步引入 Managed Rules 和 CloudFront 架构联动。
+这是教育用简化模型，不是真实 AWS WAF。不解析或发送 HTTP、不检测真实攻击、不连接 AWS。两条固定条件规则可编辑启用、动作与优先级。Count 只记录本次执行；设置仅存内存。全请求 Allow 是解释顺序的教学例，不是生产建议。未实现 SQLi、Managed Rules、Label、Rule Group、CAPTCHA、持久化指标或其他 AWS 服务。

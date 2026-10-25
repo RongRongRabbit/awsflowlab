@@ -75,7 +75,7 @@ renderer.code = ({ text, lang }) => {
 };
 renderer.link = ({ href, text }) => {
   let target = href;
-  if (!href.startsWith('#') && !/^https?:/.test(href)) target = `https://github.com/RongRongRabbit/awsflowlab/blob/feature/waf-v0.2/${path.relative(root, path.resolve(path.dirname(sourcePath), href)).split(path.sep).join('/')}`;
+  if (!href.startsWith('#') && !/^https?:/.test(href)) target = `https://github.com/RongRongRabbit/awsflowlab/blob/main/${path.relative(root, path.resolve(path.dirname(sourcePath), href)).split(path.sep).join('/')}`;
   return `<a href="${escape(target)}">${text}</a>`;
 };
 const content = marked.parse(source, { renderer });
