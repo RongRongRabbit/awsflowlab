@@ -43,14 +43,24 @@ describe('WAF playground', () => {
     fireEvent.click(card.querySelector('summary')!); expect(card.open).toBe(false);
     expect(screen.getByText(/Advanced Settings/, { selector: 'summary' }).closest('details')?.open).toBe(false);
   });
-  it('offers a minimal introduction, presenter and keyboard navigation with reset', () => {
-    render(<App/>); click('Hands-on 紹介モード'); expect(screen.queryByLabelText('Default Action')).toBeNull();
-    expect(screen.queryByText('気になることから学ぶ')).toBeNull(); expect(document.querySelectorAll('.diagram > .node')).toHaveLength(3);
+  it('uses one playground with keyboard scenario navigation and reset', () => {
+    render(<App/>);
+    expect(screen.queryByRole('button', { name: 'Hands-on 紹介モード' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '発表モード' })).toBeNull();
+    expect(screen.getByLabelText('Default Action')).toBeTruthy();
+    expect(screen.getByText('気になることから学ぶ')).toBeTruthy();
+    expect(document.querySelector('.diagram .acl')).toBeTruthy();
     finish(); expect(screen.getByRole('status').textContent).toContain('ALLOW');
     fireEvent.keyDown(window, { key: 'ArrowRight', altKey: true }); finish(); expect(screen.getByRole('status').textContent).toContain('BLOCK');
-    click('03 Block を Count に変更'); finish(); expect(screen.getByRole('status').textContent).toContain('Count：1');
-    click('発表モード'); expect(document.querySelector('.presenter')).toBeTruthy(); fireEvent.keyDown(window, { key: 'Escape' }); expect(document.querySelector('.presenter')).toBeNull();
-    click('リセット'); expect(screen.queryByRole('status')).toBeNull(); click('Playground に戻る'); expect(screen.getByLabelText('Default Action')).toBeTruthy();
+    fireEvent.keyDown(window, { key: 'ArrowRight', altKey: true }); finish(); expect(screen.getByRole('status').textContent).toContain('Count：1');
+    fireEvent.keyDown(window, { key: 'ArrowRight', altKey: true });
+    expect(screen.getByRole('button', { name: '04 ルールの順番を変更' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.keyDown(window, { key: 'ArrowRight', altKey: true });
+    expect(screen.getByRole('button', { name: '01 通常のリクエスト' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.keyDown(window, { key: 'ArrowLeft', altKey: true });
+    expect(screen.getByRole('button', { name: '04 ルールの順番を変更' }).getAttribute('aria-pressed')).toBe('true');
+    click('リセット'); expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByRole('button', { name: '01 通常のリクエスト' }).getAttribute('aria-pressed')).toBe('true');
   });
   it('plays real events, pauses on edits, replays snapshots and resets all settings', () => {
     vi.useFakeTimers(); render(<App/>); click('攻撃サンプル'); click('▶ リクエストを送信');

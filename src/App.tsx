@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Expand, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { createDefaultAcl, type RequestKind, type Rule, type RuleAction, type WebAcl } from './services/waf/wafEngine';
 import { advanceStep, createExecution, type Execution } from './services/waf/playback';
 import { ExecutionTrace, RequestFlow } from './components/RequestFlow';
@@ -26,8 +26,6 @@ export default function App() {
   const [execution, setExecution] = useState<Execution | null>(null);
   const [step, setStep] = useState(-1);
   const [playing, setPlaying] = useState(false);
-  const [presenter, setPresenter] = useState(false);
-  const [intro, setIntro] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [playbackId, setPlaybackId] = useState(0);
   const [scenario, setScenario] = useState<number | null>(0);
@@ -47,11 +45,10 @@ export default function App() {
   };
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setPresenter(false);
-      if (event.altKey && ['ArrowLeft', 'ArrowRight'].includes(event.key)) { event.preventDefault(); loadScenario(((scenario ?? 0) + (event.key === 'ArrowRight' ? 1 : -1) + (intro ? 3 : 4)) % (intro ? 3 : 4)); }
+      if (event.altKey && ['ArrowLeft', 'ArrowRight'].includes(event.key)) { event.preventDefault(); loadScenario(((scenario ?? 0) + (event.key === 'ArrowRight' ? 1 : -1) + scenarios.length) % scenarios.length); }
     };
     window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key);
-  }, [scenario, intro]);
+  }, [scenario]);
   useEffect(() => {
     if (!playing || !execution) return;
     if (step >= execution.result.events.length - 1) { setPlaying(false); return; }
@@ -61,20 +58,19 @@ export default function App() {
   const complete = !!execution && step === execution.result.events.length - 1;
   const current = execution?.result.events[step];
   const actionControl = (rule: Rule) => <label>Action <select aria-label={`${rule.name} Action`} value={rule.action} onChange={event => updateRule(rule.id, { action: event.target.value as RuleAction })}><option value="ALLOW">Allow</option><option value="BLOCK">Block</option><option value="COUNT">Count</option></select></label>;
-  return <div className={`app ${presenter ? 'presenter' : ''}`}>
-    <header className="topbar"><div className="brand"><ShieldCheck size={23}/>AWS <b>FlowLab</b></div><div className="header-actions"><a href={'/awsflowlab/developer-guide/'}>Developer Guide</a><button className="ghost" aria-pressed={presenter} onClick={() => setPresenter(!presenter)}><Expand size={16}/>{presenter ? '通常表示' : '発表モード'}</button></div></header>
-    <main className="playground"><ServiceOverview><button className="ghost mode-button" aria-pressed={intro} onClick={() => { setIntro(!intro); reset(); }}>{intro ? 'Playground に戻る' : 'Hands-on 紹介モード'}</button></ServiceOverview>
-    {intro && <div className="intro-banner"><strong>Hands-on の前に · 3〜5分</strong><p>① 通常のリクエストが届く → ② 攻撃サンプルを止める → ③ Count に変えると？ 各例を選んで送信しましょう。</p><span>WAF はアプリの手前でリクエストを確認します。詳しい設定操作は Hands-on で体験します。</span></div>}
-    <PlaygroundPanel title={intro ? '紹介する例' : 'まずは例を選んでみよう'} className="scenario-panel"><div className="scenario-grid">{scenarios.slice(0, intro ? 3 : 4).map((name, index) => <button key={name} className={`scenario ${scenario === index ? 'selected' : ''}`} aria-pressed={scenario === index} onClick={() => loadScenario(index)}><span>0{index + 1}</span>{name}</button>)}</div><p className="muted">設定だけを読み込みます。「リクエストを送信」で動きを確認。Alt + ← / → で例を選択できます。</p></PlaygroundPanel>
-    <PlaygroundPanel title="リクエストの動きを見る" className="visualization"><div className="visual-heading"><span className="live-dot"/><span>HTTP REQUEST → RULE EVALUATION → FINAL DECISION</span></div><RequestFlow key={playbackId} execution={execution} step={step} rules={acl.rules} detailed={!intro}/>
+  return <div className="app">
+    <header className="topbar"><div className="brand"><ShieldCheck size={23}/>AWS <b>FlowLab</b></div><div className="header-actions"><a href={'/awsflowlab/developer-guide/'}>Developer Guide</a></div></header>
+    <main className="playground"><ServiceOverview/>
+    <PlaygroundPanel title="まずは例を選んでみよう" className="scenario-panel"><div className="scenario-grid">{scenarios.map((name, index) => <button key={name} className={`scenario ${scenario === index ? 'selected' : ''}`} aria-pressed={scenario === index} onClick={() => loadScenario(index)}><span>0{index + 1}</span>{name}</button>)}</div><p className="muted">まずは通常のリクエストを送ってみましょう。設定だけを読み込みます。「リクエストを送信」で動きを確認。Alt + ← / → で例を選択できます。</p></PlaygroundPanel>
+    <PlaygroundPanel title="リクエストの動きを見る" className="visualization"><div className="visual-heading"><span className="live-dot"/><span>HTTP REQUEST → RULE EVALUATION → FINAL DECISION</span></div><RequestFlow key={playbackId} execution={execution} step={step} rules={acl.rules} detailed={true}/>
     <div className="execution"><div className="execution-title"><strong>{execution ? `${step + 1} / ${execution.result.events.length}` : '例を選ぶ → 送信 → 設定を変えて再送信'}</strong><span>{playing ? '再生中' : '準備完了'}</span></div>{dirty && <p className="config-notice">設定が変わりました。再送信で反映します。表示中の実行は前の設定です。</p>}
     <div className="demo-actions"><button className="primary" onClick={() => send(true)}>▶ リクエストを送信</button><button className="ghost" onClick={reset}>リセット</button></div><div aria-live="polite">{current && !complete && <div className="current-explanation"><strong>{current.title} {current.status}</strong><p>{current.detail}</p></div>}</div>
     {complete && <div className={`result ${execution.result.action === 'BLOCK' ? 'danger' : 'success'}`} role="status"><div><strong>最終結果：{execution.result.action}</strong><p>{current?.detail}</p><p>Count：{execution.result.countedRuleIds.length} 件（このリクエスト）</p></div></div>}
     <details className="trace-history"><summary>ステップごとに確認・再生</summary><div className="demo-actions"><button className="ghost" onClick={() => { if (!execution || complete || dirty) send(false); else { setPlaying(false); setStep(advanceStep(step, execution.result)); } }}>次のステップ →</button><button className="ghost" disabled={!playing} onClick={() => setPlaying(false)}>一時停止</button><button className="ghost" disabled={!execution} onClick={() => { setStep(0); setPlaying(true); setPlaybackId(id => id + 1); }}>再生</button></div>{execution && <ExecutionTrace result={execution.result} step={step}/>}</details>
     {previous && <details className="previous"><summary>前の結果と比較</summary><p>{previous}</p></details>}</div></PlaygroundPanel>
-    {!intro && <PlaygroundPanel title="設定を変えて試す" className="control-panel"><div className="basic-controls"><div className="segmented">{(['normal', 'attack'] as const).map(value => <button key={value} aria-pressed={kind === value} className={kind === value ? 'active' : ''} onClick={() => { setKind(value); edited(); }}>{value === 'normal' ? '通常アクセス' : '攻撃サンプル'}</button>)}</div><label><input type="checkbox" aria-label="攻撃検知ルール" checked={acl.rules[0].enabled} onChange={event => updateRule('attack', { enabled: event.target.checked })}/>攻撃検知ルール {acl.rules[0].enabled ? 'ON' : 'OFF'}</label>{actionControl(acl.rules[0])}</div>
-    <details className="advanced"><summary>Advanced Settings · 優先順位と既定の動作</summary><div className="rule-editor">{[...acl.rules].sort((a, b) => a.priority - b.priority).map(rule => <fieldset key={rule.id}><legend>{rule.name}</legend><label><input type="checkbox" aria-label={`${rule.name} Enabled`} checked={rule.enabled} onChange={event => updateRule(rule.id, { enabled: event.target.checked })}/>ON / OFF</label><span>条件：{rule.condition === 'attack' ? '攻撃サンプル' : 'すべてのサンプル'}</span>{rule.id !== 'attack' && actionControl(rule)}<label>Priority <input type="number" min="0" step="1" aria-label={`${rule.name} Priority`} value={rule.priority} onChange={event => { if (event.target.value !== '') changePriority(rule.id, Number(event.target.value)); }}/></label></fieldset>)}<label>Default Action <select aria-label="Default Action" value={acl.defaultAction} onChange={event => { setAcl(currentAcl => ({ ...currentAcl, defaultAction: event.target.value as 'ALLOW' | 'BLOCK' })); edited(); }}><option value="ALLOW">Allow</option><option value="BLOCK">Block</option></select></label><p className="muted">小さい Priority から確認。同じ数字を入力すると順番を交換します。全リクエストの Allow は優先順位を学ぶための例です。</p></div></details></PlaygroundPanel>}
-    {!intro && <PlaygroundPanel title="気になることから学ぶ"><KnowledgeCards cards={knowledge}/></PlaygroundPanel>}
+    <PlaygroundPanel title="設定を変えて試す" className="control-panel"><div className="basic-controls"><div className="segmented">{(['normal', 'attack'] as const).map(value => <button key={value} aria-pressed={kind === value} className={kind === value ? 'active' : ''} onClick={() => { setKind(value); edited(); }}>{value === 'normal' ? '通常アクセス' : '攻撃サンプル'}</button>)}</div><label><input type="checkbox" aria-label="攻撃検知ルール" checked={acl.rules[0].enabled} onChange={event => updateRule('attack', { enabled: event.target.checked })}/>攻撃検知ルール {acl.rules[0].enabled ? 'ON' : 'OFF'}</label>{actionControl(acl.rules[0])}</div>
+    <details className="advanced"><summary>Advanced Settings · 優先順位と既定の動作</summary><div className="rule-editor">{[...acl.rules].sort((a, b) => a.priority - b.priority).map(rule => <fieldset key={rule.id}><legend>{rule.name}</legend><label><input type="checkbox" aria-label={`${rule.name} Enabled`} checked={rule.enabled} onChange={event => updateRule(rule.id, { enabled: event.target.checked })}/>ON / OFF</label><span>条件：{rule.condition === 'attack' ? '攻撃サンプル' : 'すべてのサンプル'}</span>{rule.id !== 'attack' && actionControl(rule)}<label>Priority <input type="number" min="0" step="1" aria-label={`${rule.name} Priority`} value={rule.priority} onChange={event => { if (event.target.value !== '') changePriority(rule.id, Number(event.target.value)); }}/></label></fieldset>)}<label>Default Action <select aria-label="Default Action" value={acl.defaultAction} onChange={event => { setAcl(currentAcl => ({ ...currentAcl, defaultAction: event.target.value as 'ALLOW' | 'BLOCK' })); edited(); }}><option value="ALLOW">Allow</option><option value="BLOCK">Block</option></select></label><p className="muted">小さい Priority から確認。同じ数字を入力すると順番を交換します。全リクエストの Allow は優先順位を学ぶための例です。</p></div></details></PlaygroundPanel>
+    <PlaygroundPanel title="気になることから学ぶ"><KnowledgeCards cards={knowledge}/></PlaygroundPanel>
     <p className="disclaimer">※ 教育用の簡易モデルです。実際の AWS WAF ではありません。HTTP 解析・攻撃検知・AWS 接続は行いません。設定はブラウザーのメモリー内のみで、再読み込みで初期化されます。</p></main>
   </div>;
 }

@@ -51,16 +51,16 @@ vite.config.ts
 ## 项目架构
 
 ```flow
-App.tsx：场景、介绍模式、请求、规则配置、执行状态
+App.tsx：场景、请求、规则配置、执行状态
 playback.ts / createExecution：冻结本次请求与 Web ACL
 wafEngine.ts / evaluateWaf：按 Priority 生成执行事件
 RequestFlow / ExecutionTrace：按当前事件渲染路径、状态与解释
-app.css：方向粒子、动作颜色、演讲与响应式布局
+app.css：方向粒子、动作颜色与响应式布局
 ```
 
-[App.tsx](../src/App.tsx) 是协调组件；[规则引擎](../src/services/waf/wafEngine.ts) 无 React 依赖；[播放模型](../src/services/waf/playback.ts) 创建执行快照并限制步数；[展示组件](../src/components/RequestFlow.tsx) 只接收执行数据。没有 URL 路由，场景和模式由内存状态切换。刷新会清空配置和历史结果。
+[App.tsx](../src/App.tsx) 是协调组件；[规则引擎](../src/services/waf/wafEngine.ts) 无 React 依赖；[播放模型](../src/services/waf/playback.ts) 创建执行快照并限制步数；[展示组件](../src/components/RequestFlow.tsx) 只接收执行数据。没有 URL 路由，场景由内存状态切换。刷新会清空配置和历史结果。
 
-## 单页 Playground 与介绍模式
+## 统一单页 Playground
 
 <!-- code-ref:src/App.tsx#createScenario -->
 <!-- code-ref:src/App.tsx#loadScenario -->
@@ -85,9 +85,9 @@ ServiceOverview 提供服务身份与架构关系；PlaygroundPanel 统一可视
 修改一个设置 → 重新发送 → 展开前次结果比较
 ```
 
-`send` 在上次完成时保存请求、动作和完整规则摘要用于比较。`changePriority` 仅接受非负安全整数，重复值交换两条规则的 Priority。重置恢复默认正常请求、默认规则，并清除轨迹、比较和 dirty；模式、投影状态不受重置影响。折叠播放区保留手动逐步、暂停、快照重播和历史事件。
+`send` 在上次完成时保存请求、动作和完整规则摘要用于比较。`changePriority` 仅接受非负安全整数，重复值交换两条规则的 Priority。重置恢复默认正常请求、默认规则，并清除轨迹、比较和 dirty。折叠播放区保留手动逐步、暂停、快照重播和历史事件。
 
-Hands-on 介绍模式重置到正常示例，只显示架构、三个场景及简化三节点动画；隐藏配置和知识卡，保留真实引擎结果、Count、步骤说明和重置。建议 3～5 分钟依次演示正常、攻击 Block、可选 Count，不重复实操细节。返回 Playground 同样恢复初始配置。Presenter Mode 放大动画节点与当前解释，是布局模式而非浏览器全屏；Esc 退出。Alt + 左右循环选择可见场景，Tab / Enter / Space 使用原生控件完成导航与展开。
+界面统一为 Playground，移除独立 Hands-on 介绍模式与 Presenter Mode，不再存在模式切换、模式导致的配置重置或专用投影样式。四个场景、规则动画、基础配置、折叠高级配置与知识卡始终在同一页面。默认提示先发送正常请求；现场可依次选正常、攻击 Block、Count，无需切换界面。需要大屏展示时使用浏览器缩放或全屏。Alt + 左右循环选择四个场景，Tab / Enter / Space 使用原生控件完成导航与展开。
 
 ## 规则模型与执行语义
 
@@ -137,11 +137,11 @@ break;
 <!-- code-ref:src/components/RequestFlow.tsx#RequestFlow -->
 <!-- code-ref:src/components/RequestFlow.tsx#ExecutionTrace -->
 
-`RequestFlow` 介绍模式直接渲染三个同级节点（User / WAF / Website），只显示一个 WAF 标题，避免嵌套 flex 卡片撑出容器或连线穿过节点。完整 Playground 使用 Web ACL 容器，规则卡和容器禁止收缩，详细流程按内容宽度布局；窄屏在流程区域内横向滚动。它按本次执行的顺序排列卡片，仅显示已执行事件的状态。当前 ruleId 高亮对应卡片；终止后剩余卡片显示未评估。界面默认只突出当前事件的一句说明；历史轨迹在折叠区域中。`ExecutionTrace` 只显示 `events.slice(0, step + 1)`，不会提前泄露最终答案。移动粒子由当前事件激活，单次播放，不持续循环；发送和重播通过新的组件 key 重启动画；最终 Allow 只播放一次通往网站的动画。
+`RequestFlow` 在 Playground 中始终使用详细 Web ACL 容器；组件原有简化三节点渲染分支仍保留，但当前页面不调用。规则卡和容器禁止收缩，详细流程按内容宽度布局；窄屏在流程区域内横向滚动。它按本次执行的顺序排列卡片，仅显示已执行事件的状态。当前 ruleId 高亮对应卡片；终止后剩余卡片显示未评估。界面默认只突出当前事件的一句说明；历史轨迹在折叠区域中。`ExecutionTrace` 只显示 `events.slice(0, step + 1)`，不会提前泄露最终答案。移动粒子由当前事件激活，单次播放，不持续循环；发送和重播通过新的组件 key 重启动画；最终 Allow 只播放一次通往网站的动画。
 
 ## 测试与质量检查
 
-[引擎测试](../src/services/waf/wafEngine.test.ts) 覆盖 v0.1 四组合、终止、Count 后继续、Priority 重叠、Default Allow / Block、禁用、No Match、空规则、配置校验、输入不变性和执行快照。[组件测试](../src/App.test.tsx) 覆盖场景独立加载且不自动执行、终止后未评估、规则开关、Count、Default Action、重复 Priority 交换及非法数值、折叠卡片、介绍模式、键盘场景导航、Presenter、暂停、自动推进、快照重播、结果比较及完整重置。旧章节测试随交互迁移而重写，引擎测试完整保留。
+[引擎测试](../src/services/waf/wafEngine.test.ts) 覆盖 v0.1 四组合、终止、Count 后继续、Priority 重叠、Default Allow / Block、禁用、No Match、空规则、配置校验、输入不变性和执行快照。[组件测试](../src/App.test.tsx) 覆盖场景独立加载且不自动执行、终止后未评估、规则开关、Count、Default Action、重复 Priority 交换及非法数值、折叠卡片、统一界面与旧模式入口移除、键盘场景循环导航、暂停、自动推进、快照重播、结果比较及完整重置。旧章节测试随交互迁移而重写，引擎测试完整保留。
 
 [文档生成器测试](../scripts/docs.test.mjs) 验证重复构建字节一致，以及缺失本地链接、章节锚点、代码标识和过期文件树会失败。GitHub CI 执行相同检查；独立 Pages workflow 仅在 main 更新后构建并部署。
 
