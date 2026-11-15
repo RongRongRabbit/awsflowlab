@@ -1,33 +1,74 @@
-# AWS FlowLab — AWS WAF Playground
+# AWS FlowLab — AWS Service Playground
 
-无需章节顺序的日语 AWS WAF 交互 Playground。选一个例子，点击发送，即可观察规则与最终结果。React / TypeScript / Vite 静态应用，不需要后端、AWS 账号或付费 API。
+AWS サービスの仕組みを、リクエストの流れを見ながら学べるインタラクティブな Playground です。例を選び、リクエストを送信し、設定を変えて結果を比べられます。順番に読み進める必要はありません。
 
-## 在线体验
+React / TypeScript / Vite で構成された静的アプリです。バックエンド、AWS アカウント、有料 API は不要です。
 
-[打开 AWS FlowLab（待 main 合并后首次部署与验证）](https://RongRongRabbit.github.io/awsflowlab/)。当前不宣称站点已经上线。
+## オンラインで試す
 
-## 本地运行
+[AWS FlowLab を開く](https://rongrongrabbit.github.io/awsflowlab/)
 
-Node.js 22.12+、24.x 或 26+。
+公開サイトには main ブランチの内容が反映されます。開発ブランチの内容は、ローカルで確認できます。
+
+## ローカルで起動する
+
+Node.js 22.12 以降の 22.x、24.x、または 26 以降が必要です。
 
 ```bash
 npm ci
 npm run dev
 ```
 
-访问开发服务器的 `/awsflowlab/`。
+ターミナルに表示された URL の `/awsflowlab/` を開いてください。ほかのプロジェクトがポートを使用している場合、Vite は別のポートを選びます。
 
-## 功能
+ポートを指定して起動する場合：
 
-- 单页服务概览、User → WAF → Application 架构、真实模拟事件驱动的请求动画。
-- 四个场景仅加载配置：正常、攻击 Block、Block 改 Count、Priority 反转；由用户手动发送。
-- 基础请求选择、Rule ON/OFF、Action；高级折叠区提供 Priority、第二条规则与 Default Action。
-- Allow / Block 终止，Count 继续，较小 Priority 优先；Match、No Match、禁用及未评估有独立状态。
-- 自动播放、逐步、暂停、重播、前次结果比较、一键完整重置。
-- 六张日语知识卡自由展开；统一 Playground，可直接演示正常、攻击 Block 和 Count 场景。
-- Alt + 左右选择场景、键盘操作、响应式布局及减少动画偏好支持。
+```bash
+npm run dev -- --host 127.0.0.1 --port 5180 --strictPort
+```
 
-## 验证与文档
+この場合は `http://127.0.0.1:5180/awsflowlab/` にアクセスします。指定ポートが使用中の場合はエラーで停止します。
+
+## AWS WAF
+
+利用者からアプリケーションへ届くリクエストを、ルールで確認する流れを体験できます。
+
+- 通常アクセス、攻撃サンプル、Block から Count への変更、Priority の変更を試す4つの例。
+- リクエストの種類、ルールの ON/OFF、Allow / Block / Count を変更。
+- 折りたたみ設定で Priority と Default Action を調整。
+- Allow / Block は判定を終了し、Count は記録して次のルールへ進む動作を表示。
+- Match / No Match、無効なルール、終了後の未評価ルールを区別。
+- 前回の結果と設定を表示し、変更前後を比較。
+
+## Application Load Balancer（ALB）
+
+リクエストのパスに応じて、転送先の Target Group を選ぶ流れを体験できます。
+
+```text
+利用者 → ALB → Target Group → アプリケーション
+```
+
+- 既定の Web アプリ、API パス、画像パス、Priority による転送先の変更を試す4つの例。
+- `/`、`/api/users`、`/images/logo.png` などのパスを選択。
+- Priority の小さい順に条件を確認し、最初の Match で転送先を決定。
+- 一致するルールがなければ、最後に Default Rule を適用。
+- ルールの ON/OFF、Priority（1〜50000）、各ルールと Default Rule の転送先を変更。
+- Forward と最終的に到達するアプリを、実際のシミュレーション結果に沿って表示。
+
+ルールの ON/OFF は、評価対象から外すための学習用操作です。実際の ALB に同じ有効・無効スイッチがあることを示すものではありません。
+
+## 共通の操作
+
+画面上部で AWS WAF / ALB を切り替えられます。サービスを切り替えると、設定と実行履歴は初期化されます。
+
+- 例を選ぶと設定だけを読み込みます。「リクエストを送信」で実行します。
+- 自動再生、ステップ実行、一時停止、実行時の設定を使った再生、リセットに対応。
+- 設定変更後は再送信で結果を更新。表示中の実行は元の設定を保持します。
+- 各サービスの6枚のナレッジカードは、必要なものから展開できます。
+- `Alt + ← / →` で例を切り替え、`Tab` で操作項目を移動できます。
+- 狭い画面では図の中を横スクロールできます。アニメーションを減らす端末設定にも対応します。
+
+## テストとビルド
 
 ```bash
 npm test
@@ -37,16 +78,29 @@ npm run docs:check
 npm run preview
 ```
 
-构建包含文档生成；preview 下访问 `/awsflowlab/` 和 `/awsflowlab/developer-guide/`。
+`build` は型チェック、アプリのビルド、Developer Guide の生成を実行します。プレビュー時も、ターミナルに表示されたアドレスの `/awsflowlab/` を開きます。ガイドは `/awsflowlab/developer-guide/` です。
 
-[中文 Developer Guide](docs/developer-guide.md) 是文档源，[AGENTS.md](AGENTS.md) 是维护规范。单独构建使用 `npm run docs:build`；生成 HTML 不手工编辑、不提交。
+## 開発ドキュメント
+
+- [Developer Guide（中国語）](docs/developer-guide.md)：構成、シミュレーションの仕様、処理フロー、テスト、公開方法。
+- [AGENTS.md](AGENTS.md)：開発・保守ルール。
+
+ドキュメントのソースは Markdown です。`npm run docs:build` で `dist/developer-guide/index.html` を生成します。生成した HTML は直接編集せず、Git にコミットしません。
 
 ## GitHub Pages
 
-现有 Quality checks 检查 feature 分支与 PR。新增 Pages workflow 仅在 main 更新后构建、验证并发布整个 dist，包含 App 与 developer-guide/。Vite base 与实际仓库 awsflowlab 对应，为 `/awsflowlab/`。
+GitHub Actions でテストとビルドを行い、main ブランチへの更新時に公開します。feature ブランチや PR からの本番デプロイは行いません。
 
-首次发布前，在 Settings → Pages → Build and deployment 选择 **GitHub Actions**，允许仓库运行 Actions；如 github-pages 环境需要审批，由维护者审批。合并 PR 后检查 Deploy GitHub Pages 成功，并验证桌面、手机交互与指南入口。正式可用性以实际部署和访问验证为准。
+Vite の base は、リポジトリ名に合わせた `/awsflowlab/` です。アプリと Developer Guide を同じ `dist/` から配信します。
 
-## 模拟范围
+リポジトリの Settings → Pages → Build and deployment では **GitHub Actions** を選択します。公開状況は **Deploy GitHub Pages** の実行結果で確認してください。環境の承認が必要な場合は、管理者による承認後にデプロイされます。
 
-这是教育用简化模型，不是真实 AWS WAF。不解析或发送 HTTP、不检测真实攻击、不连接 AWS。两条固定条件规则可编辑启用、动作与优先级。Count 只记录本次执行；设置仅存内存。全请求 Allow 是解释顺序的教学例，不是生产建议。未实现 SQLi、Managed Rules、Label、Rule Group、CAPTCHA、持久化指标或其他 AWS 服务。
+## シミュレーションの範囲
+
+教育用の簡易モデルであり、実際の AWS サービスではありません。HTTP 通信、実際の攻撃検知、AWS API 呼び出しは行いません。設定と実行履歴はメモリー内だけに保存されます。
+
+WAF は2つの固定条件、ALB は3つの固定パスパターンを扱います。任意のルール追加はできません。WAF の Count は今回のリクエスト内の記録です。全リクエストを Allow する例は、優先順位を学ぶためのもので、本番設定の推奨ではありません。
+
+ALB は各 Target Group に正常なアプリが1台あるモデルです。ヘルスチェック、複数台への負荷分散、TLS、Redirect、Fixed Response、WAF との連携は再現しません。
+
+WAF と ALB の評価ロジックは、それぞれ独立した決定的なモデルとして実装しています。認証情報や API キーをソースコードやフロントエンドの環境変数に含めないでください。
