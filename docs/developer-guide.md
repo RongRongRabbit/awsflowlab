@@ -208,7 +208,7 @@ jsdom 不计算真实布局，也不播放 CSS。组件测试验证当前事件�
 
 ## Developer Guide 维护与发布
 
-[AGENTS.md](../AGENTS.md) 是长期规范，[README](../README.md) 提供用户入口。每次代码变更评估文档影响，同步更新此 Markdown、流程说明与文件树，然后执行文档和项目检查，再把代码、测试及 Markdown 一起提交。
+[AGENTS.md](../AGENTS.md) 是长期规范，[README](../README.md) 使用日语提供用户入口、本地运行、WAF / ALB 功能、验证及发布说明，不记录修订过程；本指南继续使用中文。每次代码变更评估文档影响，同步更新此 Markdown、流程说明与文件树，然后执行文档和项目检查，再把代码、测试及 Markdown 一起提交。
 
 ```bash
 npm run docs:check
